@@ -57,9 +57,9 @@ export function generatePiecePath(
       a ${radius} ${radius} 0 0 1 ${radius} ${radius}
       v ${cellSize + extendTop + extendBottom - 2 * radius}
       a ${radius} ${radius} 0 0 1 -${radius} ${radius}
-      h -${cellSize - extendLeft - extendRight + 2 * radius}
+      h -${cellSize + extendLeft + extendRight - 2 * radius}
       a ${radius} ${radius} 0 0 1 -${radius} -${radius}
-      v -${cellSize - extendTop - extendBottom + 2 * radius}
+      v -${cellSize + extendTop + extendBottom - 2 * radius}
       a ${radius} ${radius} 0 0 1 ${radius} -${radius}
       Z
     `)
