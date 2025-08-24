@@ -1,6 +1,4 @@
-import React, { useEffect } from 'react'
-import { useDrag } from 'react-dnd'
-import { getEmptyImage } from 'react-dnd-html5-backend'
+import React from 'react'
 import { useGameStore } from '../stores/gameStore'
 import { GamePiece as GamePieceType } from '../types'
 import GamePiece from './GamePiece'
@@ -14,20 +12,7 @@ interface PieceTrayItemProps {
 }
 
 const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
-  const { transformPiece } = useGameStore()
-
-  const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
-    type: 'piece',
-    item: { piece },
-    collect: (monitor: any) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  }))
-
-  // Disable the native HTML5 drag preview to prevent duplication
-  useEffect(() => {
-    dragPreview(getEmptyImage(), { captureDraggingState: true })
-  }, [dragPreview])
+  const { transformPiece, pickUpPiece, cancelPickup, isPickedUp, pickedUpPiece } = useGameStore()
 
   const handleTransform = (rotate?: boolean, flip?: boolean) => {
     transformPiece(piece.id, rotate, flip)
@@ -46,33 +31,51 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
     }
   }
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    // If there's already a picked up piece that's different, cancel it first
+    if (pickedUpPiece && pickedUpPiece.id !== piece.id) {
+      cancelPickup()
+    }
+    
+    // Toggle pickup state for this piece
+    if (isPickedUp(piece.id)) {
+      cancelPickup()
+    } else {
+      pickUpPiece(piece)
+    }
+  }
+
+  const isPiecePicked = isPickedUp(piece.id)
+
   return (
     <div
-      className={`absolute z-20 cursor-grab transition-transform duration-200 ${
-        !isDragging ? 'hover:scale-105 hover:z-100' : ''
-      } ${isDragging ? 'opacity-0' : 'opacity-100'}`}
+      className={`absolute z-20 cursor-pointer transition-transform duration-200 ${
+        !isPiecePicked ? 'hover:scale-105 hover:z-100' : ''
+      } ${isPiecePicked ? 'opacity-0' : 'opacity-100'}`}
       style={{
         ...position,
         transform: `${position.transform || ''}`,
         filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))'
       }}
       onMouseEnter={(e) => {
-        if (!isDragging) {
+        if (!isPiecePicked) {
           e.currentTarget.style.transform = `${position.transform || ''} scale(1.05) rotate(0deg)`
         }
       }}
       onMouseLeave={(e) => {
-        if (!isDragging) {
+        if (!isPiecePicked) {
           e.currentTarget.style.transform = position.transform || ''
         }
       }}
     >
       <div 
-        ref={drag as any}
+        onClick={handleClick}
         onKeyDown={handleKeyDown}
         tabIndex={0}
         role="button"
-        aria-label={`Draggable piece: ${piece.shape}, value ${piece.value}. Press R to rotate, F to flip`}
+        aria-label={`Clickable piece: ${piece.shape}, value ${piece.value}. Click to pick up. Press R to rotate, F to flip`}
       >
         <GamePiece
           piece={piece}

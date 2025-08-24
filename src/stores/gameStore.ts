@@ -19,6 +19,9 @@ interface GameStore extends GameState {
   lastMoveMessage: string
   moveCount: number
   
+  // Click-to-pickup state
+  pickedUpPiece: GamePiece | null
+  
   // Actions
   loadLevel: (level: GameLevel) => void
   placePiece: (piece: GamePiece, row: number, col: number) => boolean
@@ -31,6 +34,11 @@ interface GameStore extends GameState {
   validatePlacement: (piece: GamePiece, row: number, col: number) => { valid: boolean; message: string }
   getGameAnalysis: () => ReturnType<typeof analyzeWinCondition> | null
   incrementMoveCount: () => void
+  
+  // Click-to-pickup actions
+  pickUpPiece: (piece: GamePiece) => void
+  cancelPickup: () => void
+  isPickedUp: (pieceId: string) => boolean
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -45,6 +53,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lastMoveValid: true,
   lastMoveMessage: '',
   moveCount: 0,
+  pickedUpPiece: null,
 
   loadLevel: (level: GameLevel) => {
     const board = Array(5)
@@ -67,6 +76,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastMoveValid: true,
       lastMoveMessage: '',
       moveCount: 0,
+      pickedUpPiece: null,
     })
   },
 
@@ -115,7 +125,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isWon: newIsWon,
       lastMoveValid: true,
       lastMoveMessage: feedback.message,
-      moveCount: newMoveCount
+      moveCount: newMoveCount,
+      pickedUpPiece: null, // Clear picked up piece when placing
     }
     
     set(newState)
@@ -206,9 +217,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
           : p
       )
 
+    // Also update picked up piece if it matches
+    const updatedPickedUpPiece = state.pickedUpPiece?.id === pieceId
+      ? {
+          ...state.pickedUpPiece,
+          rotation: rotate ? (state.pickedUpPiece.rotation + 90) % 360 : state.pickedUpPiece.rotation,
+          flipped: flip ? !state.pickedUpPiece.flipped : state.pickedUpPiece.flipped,
+        }
+      : state.pickedUpPiece
+
     set({
       trayPieces: updateGamePieces(state.trayPieces),
       placedPieces: updatePlacedPieces(state.placedPieces),
+      pickedUpPiece: updatedPickedUpPiece,
     })
   },
 
@@ -259,5 +280,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   incrementMoveCount: () => {
     const state = get()
     set({ moveCount: state.moveCount + 1 })
+  },
+
+  // Click-to-pickup implementation
+  pickUpPiece: (piece: GamePiece) => {
+    set({ pickedUpPiece: piece })
+  },
+
+  cancelPickup: () => {
+    set({ pickedUpPiece: null })
+  },
+
+  isPickedUp: (pieceId: string) => {
+    const state = get()
+    return state.pickedUpPiece?.id === pieceId
   }
 }))

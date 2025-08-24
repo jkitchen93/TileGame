@@ -8,7 +8,7 @@ import { getTransformedShape } from '../utils/transforms'
 import GRID_CONSTANTS from '../constants/grid'
 
 export const GameBoard: React.FC = () => {
-  const { board, placedPieces, placePiece, returnPieceToTray, monominoCount } = useGameStore()
+  const { board, placedPieces, placePiece, returnPieceToTray, monominoCount, pickedUpPiece } = useGameStore()
   const [hoveredPosition, setHoveredPosition] = useState<{ row: number; col: number } | null>(null)
   const draggedPieceRef = useRef<GamePieceType | null>(null)
   const currentHoverPositionRef = useRef<{ row: number; col: number } | null>(null)
@@ -89,12 +89,13 @@ export const GameBoard: React.FC = () => {
     }),
   }))
 
-  // Get ghost preview coordinates if piece is being dragged over a valid position
+  // Get ghost preview coordinates if piece is being dragged/picked up over a valid position
   const getGhostPreviewCells = () => {
-    if (!draggedPieceRef.current || !hoveredPosition) return []
+    const activePiece = draggedPieceRef.current || pickedUpPiece
+    if (!activePiece || !hoveredPosition) return []
 
-    const baseShape = getPolyominoShape(draggedPieceRef.current.shape)
-    const transformedShape = getTransformedShape(baseShape, draggedPieceRef.current.rotation, draggedPieceRef.current.flipped)
+    const baseShape = getPolyominoShape(activePiece.shape)
+    const transformedShape = getTransformedShape(baseShape, activePiece.rotation, activePiece.flipped)
 
     return transformedShape.map(coord => ({
       row: hoveredPosition.row + coord.y,
@@ -104,14 +105,15 @@ export const GameBoard: React.FC = () => {
 
   // Check if current hover position is valid for placement
   const isValidHoverPosition = () => {
-    if (!draggedPieceRef.current || !hoveredPosition) return false
+    const activePiece = draggedPieceRef.current || pickedUpPiece
+    if (!activePiece || !hoveredPosition) return false
 
     const placementResult = isValidPlacement(
-      draggedPieceRef.current,
+      activePiece,
       hoveredPosition.row,
       hoveredPosition.col,
       board,
-      placedPieces.filter(p => p.id !== draggedPieceRef.current!.id), // Exclude the dragged piece if it's already placed
+      placedPieces.filter(p => p.id !== activePiece!.id), // Exclude the active piece if it's already placed
       monominoCount
     )
 
@@ -121,15 +123,76 @@ export const GameBoard: React.FC = () => {
   const ghostCells = getGhostPreviewCells()
   const isValidPosition = isValidHoverPosition()
 
+  // Handle mouse movement for picked up pieces (not dragged)
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!pickedUpPiece) return
 
+    // Get board element bounds  
+    const boardElement = e.currentTarget
+    const boardRect = boardElement.getBoundingClientRect()
+    
+    // Calculate board padding dynamically based on container size
+    const containerSize = 450 // From the fixed container size
+    const boardTotalSize = GRID_CONSTANTS.BOARD_TOTAL_WIDTH
+    const padding = (containerSize - boardTotalSize) / 2
+    
+    const relativeX = e.clientX - boardRect.left - padding
+    const relativeY = e.clientY - boardRect.top - padding
 
-  // Handle clicking on placed pieces to return them to tray
-  const handleCellClick = (row: number, col: number) => {
-    const cell = board[row]?.[col]
-    if (cell?.pieceId) {
-      returnPieceToTray(cell.pieceId)
+    // Calculate which grid cell we're hovering over
+    const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
+    const col = Math.floor(relativeX / cellWithGap)
+    const row = Math.floor(relativeY / cellWithGap)
+
+    // Only update if we're within the board bounds
+    if (row >= 0 && row < 5 && col >= 0 && col < 5) {
+      setHoveredPosition({ row, col })
+    } else {
+      setHoveredPosition(null)
     }
   }
+
+  // Handle clicking on the board container
+  const handleBoardClick = (e: React.MouseEvent) => {
+    // If there's a picked up piece, try to place it using hoveredPosition
+    if (pickedUpPiece && hoveredPosition) {
+      const success = placePiece(pickedUpPiece, hoveredPosition.row, hoveredPosition.col)
+      if (!success) {
+        // If placement failed, piece remains picked up (user can try elsewhere or press ESC)
+        console.log('Invalid placement, piece remains picked up')
+      }
+      return
+    }
+    
+    // If no piece is picked up, handle returning placed pieces to tray
+    if (!pickedUpPiece) {
+      // Calculate which cell was clicked for returning pieces
+      const boardElement = e.currentTarget
+      const boardRect = boardElement.getBoundingClientRect()
+      
+      // Calculate board padding dynamically based on container size
+      const containerSize = 450 // From the fixed container size
+      const boardTotalSize = GRID_CONSTANTS.BOARD_TOTAL_WIDTH
+      const padding = (containerSize - boardTotalSize) / 2
+      
+      const relativeX = e.clientX - boardRect.left - padding
+      const relativeY = e.clientY - boardRect.top - padding
+
+      // Calculate which grid cell was clicked
+      const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
+      const col = Math.floor(relativeX / cellWithGap)
+      const row = Math.floor(relativeY / cellWithGap)
+
+      // Only handle if we're within the board bounds
+      if (row >= 0 && row < 5 && col >= 0 && col < 5) {
+        const cell = board[row]?.[col]
+        if (cell?.pieceId) {
+          returnPieceToTray(cell.pieceId)
+        }
+      }
+    }
+  }
+
 
   // Get the visual state for a cell
   const getCellState = (row: number, col: number) => {
@@ -202,7 +265,7 @@ export const GameBoard: React.FC = () => {
       
       <div
         ref={drop as any}
-        className={`relative bg-white border-2 transition-colors z-10 ${draggedPieceRef.current ? 'border-green-400 shadow-lg' : 'border-purple-200'}`}
+        className={`relative bg-white border-2 transition-colors z-10 ${draggedPieceRef.current || pickedUpPiece ? 'border-green-400 shadow-lg' : 'border-purple-200'}`}
         style={{
           borderRadius: '20px',
           padding: '25px',
@@ -210,7 +273,9 @@ export const GameBoard: React.FC = () => {
           height: '450px',
           boxShadow: '0 20px 40px rgba(147, 51, 234, 0.15), 0 10px 20px rgba(147, 51, 234, 0.1)'
         }}
+        onMouseMove={handleMouseMove}
         onMouseLeave={() => setHoveredPosition(null)}
+        onClick={handleBoardClick}
         data-board="true"
         role="grid"
         aria-label="5x5 game board for placing polyomino pieces"
@@ -256,7 +321,6 @@ export const GameBoard: React.FC = () => {
                       pieceColor.border : 
                       undefined
                   }}
-                  onClick={() => handleCellClick(rowIndex, colIndex)}
                   data-row={rowIndex}
                   data-col={colIndex}
                   role="gridcell"

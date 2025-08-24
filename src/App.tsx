@@ -8,6 +8,7 @@ import {
   GameHUD, 
   PieceTray,
   CustomDragLayer,
+  FloatingPiece,
   WinModal,
   Tutorial,
   SettingsPanel,
@@ -40,7 +41,7 @@ const sampleLevel: GameLevel = {
 }
 
 function App() {
-  const { loadLevel, isWon, moveCount } = useGameStore()
+  const { loadLevel, isWon, moveCount, cancelPickup, pickedUpPiece, transformPiece } = useGameStore()
   const { startGame, updateAnalysis } = useGameFlowActions()
   const currentAnalysis = useCurrentAnalysis()
   const showTutorial = useShowTutorial()
@@ -99,9 +100,29 @@ function App() {
   const handleKeyDown = (e: KeyboardEvent) => {
     switch (e.key.toLowerCase()) {
       case 'escape':
-        // Close any open modals
-        setShowWinModal(false)
-        setShowSettingsModal(false)
+        // Cancel picked up piece first, then close modals
+        if (pickedUpPiece) {
+          cancelPickup()
+          e.preventDefault()
+        } else {
+          // Close any open modals
+          setShowWinModal(false)
+          setShowSettingsModal(false)
+        }
+        break
+      case 'r':
+        // Rotate picked up piece
+        if (pickedUpPiece) {
+          e.preventDefault()
+          transformPiece(pickedUpPiece.id, true, false)
+        }
+        break
+      case 'f':
+        // Flip picked up piece
+        if (pickedUpPiece) {
+          e.preventDefault()
+          transformPiece(pickedUpPiece.id, false, true)
+        }
         break
       case '?':
       case 'h':
@@ -195,7 +216,7 @@ function App() {
 
         {/* Instructions */}
         <div className="instructions mt-8 text-center text-purple-700 opacity-70 text-base">
-          <p>Drag pieces to the board • Press R to rotate • Press F to flip • Click placed pieces to return</p>
+          <p>Click pieces to pick up • Click board to place • Press R to rotate • Press F to flip • ESC to cancel • Click placed pieces to return</p>
         </div>
 
         {/* Modals */}
@@ -231,6 +252,9 @@ function App() {
 
         {/* Custom drag layer for smooth drag preview */}
         <CustomDragLayer />
+        
+        {/* Floating piece for click-to-pickup */}
+        <FloatingPiece />
 
         {/* Toast notifications */}
         <ToastContainer
