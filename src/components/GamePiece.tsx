@@ -70,7 +70,7 @@ export const GamePiece: React.FC<GamePieceProps> = ({
   const getStateStyles = () => {
     switch (state) {
       case 'dragging':
-        return 'opacity-0' // Hide the original piece during drag since CustomDragLayer shows it
+        return 'opacity-90' // Show the piece in drag layer with slight transparency
       case 'ghost':
         return 'opacity-50 border-2 border-green-400 bg-transparent'
       case 'placed':

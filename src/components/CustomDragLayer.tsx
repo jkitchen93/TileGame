@@ -40,7 +40,7 @@ const CustomDragLayer: React.FC = () => {
         state="dragging"
         cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE} // Use board cell size for dragging
         gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE}
-        className="opacity-90 scale-110"
+        className="scale-110"
       />
     </div>
   )

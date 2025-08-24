@@ -1,24 +1,33 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useDrag } from 'react-dnd'
+import { getEmptyImage } from 'react-dnd-html5-backend'
 import { useGameStore } from '../stores/gameStore'
 import { GamePiece as GamePieceType } from '../types'
 import GamePiece from './GamePiece'
 import GRID_CONSTANTS from '../constants/grid'
 
-interface DraggablePieceProps {
+
+interface PieceTrayItemProps {
   piece: GamePieceType
+  position: any
+  index: number
 }
 
-const DraggablePiece: React.FC<DraggablePieceProps> = ({ piece }) => {
+const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
   const { transformPiece } = useGameStore()
 
-  const [{ isDragging }, drag] = useDrag(() => ({
+  const [{ isDragging }, drag, dragPreview] = useDrag(() => ({
     type: 'piece',
     item: { piece },
     collect: (monitor: any) => ({
       isDragging: monitor.isDragging(),
     }),
   }))
+
+  // Disable the native HTML5 drag preview to prevent duplication
+  useEffect(() => {
+    dragPreview(getEmptyImage(), { captureDraggingState: true })
+  }, [dragPreview])
 
   const handleTransform = (rotate?: boolean, flip?: boolean) => {
     transformPiece(piece.id, rotate, flip)
@@ -39,21 +48,41 @@ const DraggablePiece: React.FC<DraggablePieceProps> = ({ piece }) => {
 
   return (
     <div
-      ref={drag as any}
-      className={`${isDragging ? 'opacity-80' : 'opacity-100'} transition-opacity`}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      role="button"
-      aria-label={`Draggable piece: ${piece.shape}, value ${piece.value}. Press R to rotate, F to flip`}
+      className={`absolute z-20 cursor-grab transition-transform duration-200 ${
+        !isDragging ? 'hover:scale-105 hover:z-100' : ''
+      } ${isDragging ? 'opacity-0' : 'opacity-100'}`}
+      style={{
+        ...position,
+        transform: `${position.transform || ''}`,
+        filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))'
+      }}
+      onMouseEnter={(e) => {
+        if (!isDragging) {
+          e.currentTarget.style.transform = `${position.transform || ''} scale(1.05) rotate(0deg)`
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isDragging) {
+          e.currentTarget.style.transform = position.transform || ''
+        }
+      }}
     >
-      <GamePiece
-        piece={piece}
-        state={isDragging ? 'dragging' : 'tray'}
-        onTransform={handleTransform}
-        cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE} // Use board cell size for consistency
-        gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE} // Use board gap size for consistency
-        className="transition-all duration-200"
-      />
+      <div 
+        ref={drag as any}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={`Draggable piece: ${piece.shape}, value ${piece.value}. Press R to rotate, F to flip`}
+      >
+        <GamePiece
+          piece={piece}
+          state="tray"
+          onTransform={handleTransform}
+          cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE}
+          gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE}
+          className="transition-all duration-200"
+        />
+      </div>
     </div>
   )
 }
@@ -99,23 +128,12 @@ export const PieceTray: React.FC = () => {
         const position = scatteredPositions[index] || { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
         
         return (
-          <div
+          <PieceTrayItem
             key={piece.id}
-            className="absolute z-20 cursor-grab transition-transform duration-200 hover:scale-105 hover:z-100"
-            style={{
-              ...position,
-              transform: `${position.transform || ''}`,
-              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = `${position.transform || ''} scale(1.05) rotate(0deg)`
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = position.transform || ''
-            }}
-          >
-            <DraggablePiece piece={piece} />
-          </div>
+            piece={piece}
+            position={position}
+            index={index}
+          />
         )
       })}
     </>
