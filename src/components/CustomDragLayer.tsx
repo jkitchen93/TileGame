@@ -2,7 +2,7 @@ import React from 'react'
 import { useDragLayer } from 'react-dnd'
 import { GamePiece as GamePieceType } from '../types'
 import GamePiece from './GamePiece'
-import GRID_CONSTANTS from '../constants/grid'
+import { GridUtils } from '../utils/gridUtils'
 
 const CustomDragLayer: React.FC = () => {
   const {
@@ -38,8 +38,8 @@ const CustomDragLayer: React.FC = () => {
       <GamePiece
         piece={piece}
         state="dragging"
-        cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE} // Use board cell size for dragging
-        gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE}
+        cellSize={GridUtils.CELL_SIZE}
+        gapSize={GridUtils.GAP_SIZE}
         className="scale-110"
       />
     </div>

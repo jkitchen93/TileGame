@@ -2,7 +2,7 @@ import React from 'react'
 import { useGameStore } from '../stores/gameStore'
 import { GamePiece as GamePieceType } from '../types'
 import GamePiece from './GamePiece'
-import GRID_CONSTANTS from '../constants/grid'
+import { GridUtils } from '../utils/gridUtils'
 
 
 interface PieceTrayItemProps {
@@ -65,8 +65,8 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
         <GamePiece
           piece={piece}
           state="tray"
-          cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE}
-          gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE}
+          cellSize={GridUtils.CELL_SIZE}
+          gapSize={GridUtils.GAP_SIZE}
           className="transition-all duration-200"
         />
       </div>

@@ -24,17 +24,14 @@ export const GamePiece: React.FC<GamePieceProps> = ({
   const baseShape = getPolyominoShape(piece.shape)
   const transformedShape = getTransformedShape(baseShape, piece.rotation, piece.flipped)
 
-  // For unified pieces, we don't use gaps within the piece
-  const internalGapSize = 0 // No gaps between cells of the same piece
+  // Get piece dimensions (with gaps for proper spanning)
+  const { width, height } = getPieceDimensions(transformedShape, cellSize, gapSize)
   
-  // Get piece dimensions
-  const { width, height } = getPieceDimensions(transformedShape, cellSize, internalGapSize)
-  
-  // Generate SVG path for the piece
-  const piecePath = generatePiecePath(transformedShape, cellSize, internalGapSize)
+  // Generate SVG path for the piece (will create unified appearance)
+  const piecePath = generatePiecePath(transformedShape, cellSize, gapSize)
   
   // Get value overlay position
-  const valuePosition = getValueOverlayPosition(transformedShape, cellSize, internalGapSize)
+  const valuePosition = getValueOverlayPosition(transformedShape, cellSize, gapSize)
 
   // Get gradient colors for this piece
   const [gradientStart, gradientEnd] = getGradientColors(piece.value)

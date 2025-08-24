@@ -1,8 +1,9 @@
 import { Coordinates } from './polyominoes'
+import { GridUtils } from './gridUtils'
 
 /**
  * Generates an SVG path for a polyomino piece as a single unified shape
- * Creates a single continuous shape by merging adjacent cells
+ * Always creates a unified appearance regardless of gap size
  */
 export function generatePiecePath(
   shape: Coordinates[],
@@ -21,76 +22,60 @@ export function generatePiecePath(
     y: coord.y - minY
   }))
 
-  // When gapSize is 0, we want a unified shape
-  // When gapSize > 0, we still keep cells separate
-  if (gapSize > 0) {
-    // Keep cells separate with gaps (original behavior)
-    const cellWithGap = cellSize + gapSize
-    const radius = Math.min(8, cellSize * 0.15)
-    
-    const paths: string[] = []
-    normalizedShape.forEach(coord => {
-      const x = coord.x * cellWithGap
-      const y = coord.y * cellWithGap
-      
-      paths.push(`
-        M ${x + radius} ${y}
-        h ${cellSize - 2 * radius}
-        a ${radius} ${radius} 0 0 1 ${radius} ${radius}
-        v ${cellSize - 2 * radius}
-        a ${radius} ${radius} 0 0 1 -${radius} ${radius}
-        h -${cellSize - 2 * radius}
-        a ${radius} ${radius} 0 0 1 -${radius} -${radius}
-        v -${cellSize - 2 * radius}
-        a ${radius} ${radius} 0 0 1 ${radius} -${radius}
-        Z
-      `)
-    })
-    
-    return paths.join(' ')
-  }
-  
-  // For unified shape (gapSize === 0), create a single merged path
-  const unitSize = cellSize
+  // Always render as unified shape
+  // Position cells according to grid spacing, but render them touching
+  const gridStep = cellSize + gapSize
   const radius = Math.min(8, cellSize * 0.15)
   
   // Create a set of cell coordinates for quick lookup
   const cellSet = new Set(normalizedShape.map(c => `${c.x},${c.y}`))
   
-  // Build the unified shape as a single path
-  const rects: string[] = []
+  // Build paths for each cell, positioned on grid but sized to touch
+  const paths: string[] = []
   
   normalizedShape.forEach(coord => {
-    const x = coord.x * unitSize
-    const y = coord.y * unitSize
+    // Position based on grid
+    const x = coord.x * gridStep
+    const y = coord.y * gridStep
     
-    // Check adjacent cells
+    // Check adjacent cells to determine which edges to round
     const hasTop = cellSet.has(`${coord.x},${coord.y - 1}`)
     const hasBottom = cellSet.has(`${coord.x},${coord.y + 1}`)
     const hasLeft = cellSet.has(`${coord.x - 1},${coord.y}`)
     const hasRight = cellSet.has(`${coord.x + 1},${coord.y}`)
     
-    // Draw a rectangle for this cell
-    rects.push(`
-      M ${x} ${y}
-      h ${unitSize}
-      v ${unitSize}
-      h -${unitSize}
+    // Extend cell to connect with adjacent cells
+    const extendTop = hasTop ? gapSize / 2 : 0
+    const extendBottom = hasBottom ? gapSize / 2 : 0
+    const extendLeft = hasLeft ? gapSize / 2 : 0
+    const extendRight = hasRight ? gapSize / 2 : 0
+    
+    // Draw cell with extensions to create unified shape
+    paths.push(`
+      M ${x - extendLeft + radius} ${y - extendTop}
+      h ${cellSize + extendLeft + extendRight - 2 * radius}
+      a ${radius} ${radius} 0 0 1 ${radius} ${radius}
+      v ${cellSize + extendTop + extendBottom - 2 * radius}
+      a ${radius} ${radius} 0 0 1 -${radius} ${radius}
+      h -${cellSize - extendLeft - extendRight + 2 * radius}
+      a ${radius} ${radius} 0 0 1 -${radius} -${radius}
+      v -${cellSize - extendTop - extendBottom + 2 * radius}
+      a ${radius} ${radius} 0 0 1 ${radius} -${radius}
       Z
     `)
   })
   
-  // Use a single path with fill-rule evenodd to merge overlapping rectangles
-  return rects.join(' ')
+  return paths.join(' ')
 }
 
 /**
  * Generates SVG dimensions for a piece
+ * Returns the total area the piece spans (including gaps between cells)
  */
 export function getPieceDimensions(
   shape: Coordinates[],
-  cellSize: number,
-  gapSize: number
+  _cellSize: number,
+  _gapSize: number
 ): { width: number; height: number } {
   if (shape.length === 0) return { width: 0, height: 0 }
 
@@ -99,9 +84,13 @@ export function getPieceDimensions(
   const minY = Math.min(...shape.map(c => c.y))
   const maxY = Math.max(...shape.map(c => c.y))
 
-  const cellWithGap = cellSize + gapSize
-  const width = (maxX - minX + 1) * cellWithGap - gapSize
-  const height = (maxY - minY + 1) * cellWithGap - gapSize
+  const numCellsX = maxX - minX + 1
+  const numCellsY = maxY - minY + 1
+
+  // Pieces span the full area including gaps between cells
+  // e.g., a 2x2 piece spans: 2 cells + 1 gap = 48*2 + 4*1 = 100px
+  const width = GridUtils.getPieceSpan(numCellsX)
+  const height = GridUtils.getPieceSpan(numCellsY)
 
   return { width, height }
 }

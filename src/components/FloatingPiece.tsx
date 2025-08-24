@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useGameStore } from '../stores/gameStore'
 import GamePiece from './GamePiece'
-import GRID_CONSTANTS from '../constants/grid'
+import { GridUtils } from '../utils/gridUtils'
 
 const FloatingPiece: React.FC = () => {
   const { pickedUpPiece } = useGameStore()
@@ -39,8 +39,8 @@ const FloatingPiece: React.FC = () => {
       <GamePiece
         piece={pickedUpPiece}
         state="dragging"
-        cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE}
-        gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE}
+        cellSize={GridUtils.CELL_SIZE}
+        gapSize={GridUtils.GAP_SIZE}
         className="scale-110"
       />
     </div>

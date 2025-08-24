@@ -5,7 +5,8 @@ import { GamePiece as GamePieceType } from '../types'
 import { isValidPlacement } from '../utils/placement'
 import { getPolyominoShape } from '../utils/polyominoes'
 import { getTransformedShape } from '../utils/transforms'
-import GRID_CONSTANTS from '../constants/grid'
+import GamePiece from './GamePiece'
+import { GridUtils } from '../utils/gridUtils'
 
 export const GameBoard: React.FC = () => {
   const { board, placedPieces, placePiece, pickUpPlacedPiece, monominoCount, pickedUpPiece } = useGameStore()
@@ -68,9 +69,8 @@ export const GameBoard: React.FC = () => {
       const relativeY = clientOffset.y - boardRect.top - actualPadding
 
       // Calculate which grid cell we're hovering over
-      const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
-      const col = Math.floor(relativeX / cellWithGap)
-      const row = Math.floor(relativeY / cellWithGap)
+      const col = GridUtils.toGrid(relativeX)
+      const row = GridUtils.toGrid(relativeY)
 
       // Only update if we're within the board bounds
       if (row >= 0 && row < 5 && col >= 0 && col < 5) {
@@ -136,9 +136,8 @@ export const GameBoard: React.FC = () => {
     const relativeY = e.clientY - boardRect.top - actualPadding
 
     // Calculate which grid cell we're hovering over
-    const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
-    const col = Math.floor(relativeX / cellWithGap)
-    const row = Math.floor(relativeY / cellWithGap)
+    const col = GridUtils.toGrid(relativeX)
+    const row = GridUtils.toGrid(relativeY)
 
     // Only update if we're within the board bounds
     if (row >= 0 && row < 5 && col >= 0 && col < 5) {
@@ -175,9 +174,8 @@ export const GameBoard: React.FC = () => {
       const relativeY = e.clientY - boardRect.top - actualPadding
 
       // Calculate which grid cell was clicked
-      const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
-      const col = Math.floor(relativeX / cellWithGap)
-      const row = Math.floor(relativeY / cellWithGap)
+      const col = GridUtils.toGrid(relativeX)
+      const row = GridUtils.toGrid(relativeY)
 
       // Only handle if we're within the board bounds
       if (row >= 0 && row < 5 && col >= 0 && col < 5) {
@@ -208,39 +206,6 @@ export const GameBoard: React.FC = () => {
     return 'empty'
   }
 
-  // Get piece color based on value
-  const getPieceColor = (value: number) => {
-    switch (value) {
-      case 1: return { 
-        background: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
-        border: '2px solid #2563eb'
-      }
-      case 2: return { 
-        background: 'linear-gradient(135deg, #4ade80, #22c55e)',
-        border: '2px solid #16a34a'
-      }
-      case 3: return { 
-        background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-        border: '2px solid #d97706'
-      }
-      case 4: return { 
-        background: 'linear-gradient(135deg, #c084fc, #a855f7)',
-        border: '2px solid #9333ea'
-      }
-      case 5: return { 
-        background: 'linear-gradient(135deg, #f472b6, #ec4899)',
-        border: '2px solid #db2777'
-      }
-      case 6: return { 
-        background: 'linear-gradient(135deg, #fb923c, #f97316)',
-        border: '2px solid #ea580c'
-      }
-      default: return { 
-        background: 'linear-gradient(135deg, #c084fc, #a855f7)',
-        border: '2px solid #9333ea'
-      }
-    }
-  }
 
   const getCellStyles = (state: string) => {
     switch (state) {
@@ -277,69 +242,97 @@ export const GameBoard: React.FC = () => {
         aria-label="5x5 game board for placing polyomino pieces"
         aria-describedby="board-instructions"
       >
-        {/* Grid container with consistent sizing */}
+        {/* Absolute positioned grid container */}
         <div 
-          className="grid grid-cols-5"
+          className="relative"
           style={{
-            gap: `${GRID_CONSTANTS.BOARD_GAP_SIZE}px`,
-            width: `${GRID_CONSTANTS.BOARD_TOTAL_WIDTH}px`,
-            height: `${GRID_CONSTANTS.BOARD_TOTAL_HEIGHT}px`
+            width: `${GridUtils.getPieceSpan(GridUtils.BOARD_SIZE)}px`,
+            height: `${GridUtils.getPieceSpan(GridUtils.BOARD_SIZE)}px`
           }}
         >
-          {/* Grid cells */}
+          {/* Grid cells positioned absolutely */}
           {board.map((row, rowIndex) =>
             row.map((cell, colIndex) => {
               const cellState = getCellState(rowIndex, colIndex)
               
-              // Get piece color if cell is occupied
-              const pieceColor = cell.pieceValue ? getPieceColor(cell.pieceValue) : null
-              
               return (
                 <div
                   key={`${rowIndex}-${colIndex}`}
-                  className={`rounded-xl ${getCellStyles(cellState)} ${
+                  className={`absolute rounded-xl ${
+                    cellState === 'empty' ? getCellStyles(cellState) : ''
+                  } ${
                     hoveredPosition && hoveredPosition.row === rowIndex && hoveredPosition.col === colIndex ? 
                     'ring-2 ring-blue-400 ring-offset-1' : ''
-                  } flex items-center justify-center relative`}
+                  }`}
                   style={{
-                    width: `${GRID_CONSTANTS.BOARD_CELL_SIZE}px`,
-                    height: `${GRID_CONSTANTS.BOARD_CELL_SIZE}px`,
-                    gridColumn: colIndex + 1,
-                    gridRow: rowIndex + 1,
+                    left: `${GridUtils.toPixels(colIndex)}px`,
+                    top: `${GridUtils.toPixels(rowIndex)}px`,
+                    width: `${GridUtils.CELL_SIZE}px`,
+                    height: `${GridUtils.CELL_SIZE}px`,
                     background: cellState === 'ghost-valid' ? 
                       'linear-gradient(135deg, #bbf7d0, #86efac)' :
-                      cellState === 'occupied' && pieceColor ?
-                      pieceColor.background :
+                      cellState === 'ghost-invalid' ?
+                      'linear-gradient(135deg, #fecaca, #fca5a5)' :
                       cellState === 'empty' ? 
                       'linear-gradient(135deg, #faf5ff, #f3e8ff)' : 
-                      'transparent',
-                    border: cellState === 'occupied' && pieceColor ? 
-                      pieceColor.border : 
-                      undefined
+                      'transparent'
                   }}
                   data-row={rowIndex}
                   data-col={colIndex}
                   role="gridcell"
                   aria-label={`Board cell ${rowIndex + 1}, ${colIndex + 1}${cell.pieceId ? ' - occupied' : ' - empty'}`}
                   tabIndex={cell.pieceId ? 0 : -1}
-                >
-                  {/* Show piece value if cell is occupied */}
-                  {cellState === 'occupied' && cell.pieceValue && (
-                    <div
-                      className="font-bold text-white pointer-events-none select-none"
-                      style={{
-                        fontSize: `${Math.max(GRID_CONSTANTS.BOARD_CELL_SIZE * 0.4, 18)}px`,
-                        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
-                      }}
-                    >
-                      {cell.pieceValue}
-                    </div>
-                  )}
-                </div>
+                />
               )
             })
           )}
 
+          {/* Render placed pieces as unified SVG overlays */}
+          {placedPieces.map(piece => {
+            const leftPosition = GridUtils.toPixels(piece.position.x)
+            const topPosition = GridUtils.toPixels(piece.position.y)
+            
+            return (
+              <div
+                key={piece.id}
+                className="absolute cursor-pointer hover:z-50"
+                style={{
+                  left: `${leftPosition}px`,
+                  top: `${topPosition}px`,
+                  pointerEvents: 'auto'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  pickUpPlacedPiece(piece.id)
+                }}
+              >
+                <GamePiece
+                  piece={piece}
+                  state="placed"
+                  cellSize={GridUtils.CELL_SIZE}
+                  gapSize={GridUtils.GAP_SIZE}
+                />
+              </div>
+            )
+          })}
+
+          {/* Ghost preview for dragging/picked up pieces */}
+          {(draggedPieceRef.current || pickedUpPiece) && hoveredPosition && isValidPosition && (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${GridUtils.toPixels(hoveredPosition.col)}px`,
+                top: `${GridUtils.toPixels(hoveredPosition.row)}px`
+              }}
+            >
+              <GamePiece
+                piece={draggedPieceRef.current || pickedUpPiece!}
+                state="ghost"
+                cellSize={GridUtils.CELL_SIZE}
+                gapSize={GridUtils.GAP_SIZE}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
