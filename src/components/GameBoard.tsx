@@ -7,9 +7,10 @@ import { getPolyominoShape } from '../utils/polyominoes'
 import { getTransformedShape } from '../utils/transforms'
 import GamePiece from './GamePiece'
 import { GridUtils } from '../utils/gridUtils'
+import { calculateBoardGrabPoint } from '../utils/grabPoint'
 
 export const GameBoard: React.FC = () => {
-  const { board, placedPieces, placePiece, pickUpPlacedPiece, monominoCount, pickedUpPiece } = useGameStore()
+  const { board, placedPieces, placePiece, pickUpPlacedPiece, monominoCount, pickedUpPiece, grabPoint } = useGameStore()
   const [hoveredPosition, setHoveredPosition] = useState<{ row: number; col: number } | null>(null)
   const draggedPieceRef = useRef<GamePieceType | null>(null)
   const currentHoverPositionRef = useRef<{ row: number; col: number } | null>(null)
@@ -30,6 +31,7 @@ export const GameBoard: React.FC = () => {
         return { dropped: false }
       }
 
+      // Place piece directly at hovered position
       const success = placePiece(currentDraggedPiece, currentPosition.row, currentPosition.col)
       console.log('Piece placement result:', success)
       
@@ -74,9 +76,11 @@ export const GameBoard: React.FC = () => {
 
       // Only update if we're within the board bounds
       if (row >= 0 && row < 5 && col >= 0 && col < 5) {
-        const position = { row, col }
-        currentHoverPositionRef.current = position
-        setHoveredPosition(position)
+        // Calculate adjusted placement position based on grab point
+        const adjustedPosition = getAdjustedPlacementPosition(row, col, item.piece, grabPoint)
+        
+        currentHoverPositionRef.current = adjustedPosition
+        setHoveredPosition(adjustedPosition)
       } else {
         currentHoverPositionRef.current = null
         setHoveredPosition(null)
@@ -87,6 +91,20 @@ export const GameBoard: React.FC = () => {
     }),
   }))
 
+  // Helper function to calculate placement position accounting for grab point
+  const getAdjustedPlacementPosition = (cursorRow: number, cursorCol: number, activePiece: GamePieceType | null, activeGrabPoint: { cellX: number, cellY: number } | null) => {
+    if (!activeGrabPoint || !activePiece) {
+      // No grab point, use default behavior (place at cursor position)
+      return { row: cursorRow, col: cursorCol }
+    }
+    
+    // Calculate placement position so that the grabbed cell aligns with cursor
+    return {
+      row: cursorRow - activeGrabPoint.cellY,
+      col: cursorCol - activeGrabPoint.cellX
+    }
+  }
+
   // Get ghost preview coordinates if piece is being dragged/picked up over a valid position
   const getGhostPreviewCells = () => {
     const activePiece = draggedPieceRef.current || pickedUpPiece
@@ -95,6 +113,7 @@ export const GameBoard: React.FC = () => {
     const baseShape = getPolyominoShape(activePiece.shape)
     const transformedShape = getTransformedShape(baseShape, activePiece.rotation, activePiece.flipped)
 
+    // Place piece at the adjusted hovered position (accounting for grab point)
     return transformedShape.map(coord => ({
       row: hoveredPosition.row + coord.y,
       col: hoveredPosition.col + coord.x
@@ -106,6 +125,7 @@ export const GameBoard: React.FC = () => {
     const activePiece = draggedPieceRef.current || pickedUpPiece
     if (!activePiece || !hoveredPosition) return false
 
+    // Check placement directly at hovered position
     const placementResult = isValidPlacement(
       activePiece,
       hoveredPosition.row,
@@ -141,7 +161,9 @@ export const GameBoard: React.FC = () => {
 
     // Only update if we're within the board bounds
     if (row >= 0 && row < 5 && col >= 0 && col < 5) {
-      setHoveredPosition({ row, col })
+      // Calculate adjusted placement position based on grab point
+      const adjustedPosition = getAdjustedPlacementPosition(row, col, pickedUpPiece, grabPoint)
+      setHoveredPosition(adjustedPosition)
     } else {
       setHoveredPosition(null)
     }
@@ -153,6 +175,7 @@ export const GameBoard: React.FC = () => {
     
     // If there's a picked up piece, try to place it using hoveredPosition
     if (pickedUpPiece && hoveredPosition) {
+      // Place piece directly at hovered position
       const success = placePiece(pickedUpPiece, hoveredPosition.row, hoveredPosition.col)
       if (!success) {
         // If placement failed, piece remains picked up (user can try elsewhere or press ESC)
@@ -181,7 +204,22 @@ export const GameBoard: React.FC = () => {
       if (row >= 0 && row < 5 && col >= 0 && col < 5) {
         const cell = board[row]?.[col]
         if (cell?.pieceId) {
-          pickUpPlacedPiece(cell.pieceId)
+          // Find the placed piece to calculate grab point
+          const placedPiece = placedPieces.find(p => p.id === cell.pieceId)
+          if (placedPiece) {
+            const grabPoint = calculateBoardGrabPoint(
+              placedPiece,
+              e.clientX,
+              e.clientY,
+              GridUtils.toPixels(placedPiece.position.x),
+              GridUtils.toPixels(placedPiece.position.y),
+              GridUtils.CELL_SIZE,
+              GridUtils.GAP_SIZE
+            )
+            pickUpPlacedPiece(cell.pieceId, grabPoint)
+          } else {
+            pickUpPlacedPiece(cell.pieceId)
+          }
         }
       }
     }
@@ -303,7 +341,19 @@ export const GameBoard: React.FC = () => {
                 }}
                 onClick={(e) => {
                   e.stopPropagation()
-                  pickUpPlacedPiece(piece.id)
+                  
+                  // Calculate grab point based on where the user clicked
+                  const grabPoint = calculateBoardGrabPoint(
+                    piece,
+                    e.clientX,
+                    e.clientY,
+                    leftPosition,
+                    topPosition,
+                    GridUtils.CELL_SIZE,
+                    GridUtils.GAP_SIZE
+                  )
+                  
+                  pickUpPlacedPiece(piece.id, grabPoint)
                 }}
               >
                 <GamePiece

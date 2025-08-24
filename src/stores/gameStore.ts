@@ -12,6 +12,7 @@ import {
 import { analyzeWinCondition } from '../utils/winConditions'
 import { validateGameRules, generateMoveValidationFeedback } from '../utils/gameRules'
 import { scheduleAutoSave } from '../utils/persistence'
+import { transformGrabPoint } from '../utils/grabPoint'
 
 interface GameStore extends GameState {
   // Enhanced state
@@ -21,6 +22,7 @@ interface GameStore extends GameState {
   
   // Click-to-pickup state
   pickedUpPiece: GamePiece | null
+  grabPoint: { cellX: number, cellY: number } | null
   
   // Actions
   loadLevel: (level: GameLevel) => void
@@ -36,8 +38,8 @@ interface GameStore extends GameState {
   incrementMoveCount: () => void
   
   // Click-to-pickup actions
-  pickUpPiece: (piece: GamePiece) => void
-  pickUpPlacedPiece: (pieceId: string) => void
+  pickUpPiece: (piece: GamePiece, grabPoint?: { cellX: number, cellY: number }) => void
+  pickUpPlacedPiece: (pieceId: string, grabPoint?: { cellX: number, cellY: number }) => void
   cancelPickup: () => void
   returnPickedUpPieceToTray: () => void
   isPickedUp: (pieceId: string) => boolean
@@ -56,6 +58,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lastMoveMessage: '',
   moveCount: 0,
   pickedUpPiece: null,
+  grabPoint: null,
 
   loadLevel: (level: GameLevel) => {
     const board = Array(5)
@@ -79,6 +82,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastMoveMessage: '',
       moveCount: 0,
       pickedUpPiece: null,
+      grabPoint: null,
     })
   },
 
@@ -129,6 +133,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastMoveMessage: feedback.message,
       moveCount: newMoveCount,
       pickedUpPiece: null, // Clear picked up piece when placing
+      grabPoint: null, // Clear grab point when placing
     }
     
     set(newState)
@@ -219,6 +224,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           : p
       )
 
+    // Store old values for grab point transformation
+    const oldRotation = state.pickedUpPiece?.rotation ?? 0
+    const oldFlipped = state.pickedUpPiece?.flipped ?? false
+
     // Also update picked up piece if it matches
     const updatedPickedUpPiece = state.pickedUpPiece?.id === pieceId
       ? {
@@ -228,10 +237,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       : state.pickedUpPiece
 
+    // Transform grab point if we have one and we're transforming the picked up piece
+    const updatedGrabPoint = state.grabPoint && state.pickedUpPiece?.id === pieceId && updatedPickedUpPiece
+      ? transformGrabPoint(state.grabPoint, updatedPickedUpPiece, oldRotation, oldFlipped)
+      : state.grabPoint
+
     set({
       trayPieces: updateGamePieces(state.trayPieces),
       placedPieces: updatePlacedPieces(state.placedPieces),
       pickedUpPiece: updatedPickedUpPiece,
+      grabPoint: updatedGrabPoint,
     })
   },
 
@@ -285,11 +300,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   // Click-to-pickup implementation
-  pickUpPiece: (piece: GamePiece) => {
-    set({ pickedUpPiece: piece })
+  pickUpPiece: (piece: GamePiece, grabPoint?: { cellX: number, cellY: number }) => {
+    set({ 
+      pickedUpPiece: piece,
+      grabPoint: grabPoint || null
+    })
   },
 
-  pickUpPlacedPiece: (pieceId: string) => {
+  pickUpPlacedPiece: (pieceId: string, grabPoint?: { cellX: number, cellY: number }) => {
     const state = get()
     const placedPiece = state.placedPieces.find((p) => p.id === pieceId)
     if (!placedPiece) return
@@ -323,6 +341,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isWon: newIsWon,
       moveCount: newMoveCount,
       pickedUpPiece: gamePiece,
+      grabPoint: grabPoint || null,
       lastMoveValid: true,
       lastMoveMessage: 'Piece picked up from board'
     }
@@ -340,7 +359,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   cancelPickup: () => {
-    set({ pickedUpPiece: null })
+    set({ 
+      pickedUpPiece: null,
+      grabPoint: null
+    })
   },
 
   returnPickedUpPieceToTray: () => {
@@ -356,12 +378,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({
         trayPieces: newTrayPieces,
         pickedUpPiece: null,
+        grabPoint: null,
         lastMoveValid: true,
         lastMoveMessage: 'Piece returned to tray'
       })
     } else {
       // Piece was from tray, just cancel pickup
-      set({ pickedUpPiece: null })
+      set({ 
+        pickedUpPiece: null,
+        grabPoint: null
+      })
     }
   },
 

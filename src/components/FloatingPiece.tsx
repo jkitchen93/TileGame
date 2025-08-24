@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react'
 import { useGameStore } from '../stores/gameStore'
 import GamePiece from './GamePiece'
 import { GridUtils } from '../utils/gridUtils'
+import { getPolyominoShape } from '../utils/polyominoes'
+import { getTransformedShape } from '../utils/transforms'
+import { getCenterGrabPoint } from '../utils/grabPoint'
 
 const FloatingPiece: React.FC = () => {
-  const { pickedUpPiece } = useGameStore()
+  const { pickedUpPiece, grabPoint } = useGameStore()
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
@@ -27,13 +30,35 @@ const FloatingPiece: React.FC = () => {
     return null
   }
 
+  // Calculate the offset based on grab point
+  const calculateOffset = () => {
+    if (!grabPoint) {
+      // No grab point, use center offset
+      const baseShape = getPolyominoShape(pickedUpPiece.shape)
+      const transformedShape = getTransformedShape(baseShape, pickedUpPiece.rotation, pickedUpPiece.flipped)
+      const centerGrabPoint = getCenterGrabPoint(transformedShape)
+      
+      const offsetX = centerGrabPoint.cellX * (GridUtils.CELL_SIZE + GridUtils.GAP_SIZE) + GridUtils.CELL_SIZE / 2
+      const offsetY = centerGrabPoint.cellY * (GridUtils.CELL_SIZE + GridUtils.GAP_SIZE) + GridUtils.CELL_SIZE / 2
+      
+      return { offsetX, offsetY }
+    }
+    
+    // Use the actual grab point
+    const offsetX = grabPoint.cellX * (GridUtils.CELL_SIZE + GridUtils.GAP_SIZE) + GridUtils.CELL_SIZE / 2
+    const offsetY = grabPoint.cellY * (GridUtils.CELL_SIZE + GridUtils.GAP_SIZE) + GridUtils.CELL_SIZE / 2
+    
+    return { offsetX, offsetY }
+  }
+
+  const { offsetX, offsetY } = calculateOffset()
+
   return (
     <div
       className="fixed pointer-events-none z-[1000]"
       style={{
-        left: mousePosition.x - 20,
-        top: mousePosition.y - 20,
-        transform: 'translate(-50%, -50%)'
+        left: mousePosition.x - offsetX,
+        top: mousePosition.y - offsetY,
       }}
     >
       <GamePiece

@@ -3,6 +3,7 @@ import { useGameStore } from '../stores/gameStore'
 import { GamePiece as GamePieceType } from '../types'
 import GamePiece from './GamePiece'
 import { GridUtils } from '../utils/gridUtils'
+import { calculateGrabPoint } from '../utils/grabPoint'
 
 
 interface PieceTrayItemProps {
@@ -29,7 +30,22 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
     if (isPickedUp(piece.id)) {
       cancelPickup()
     } else {
-      pickUpPiece(piece)
+      // Calculate grab point based on where the user clicked
+      const pieceElement = (e.target as HTMLElement).closest('[role="button"]')
+      if (pieceElement) {
+        const grabPoint = calculateGrabPoint(
+          piece,
+          e.clientX,
+          e.clientY,
+          pieceElement as HTMLElement,
+          GridUtils.CELL_SIZE,
+          GridUtils.GAP_SIZE
+        )
+        pickUpPiece(piece, grabPoint)
+      } else {
+        // Fallback: pickup without grab point
+        pickUpPiece(piece)
+      }
     }
   }
 
