@@ -41,7 +41,7 @@ const sampleLevel: GameLevel = {
 }
 
 function App() {
-  const { loadLevel, isWon, moveCount, cancelPickup, pickedUpPiece, transformPiece } = useGameStore()
+  const { loadLevel, isWon, moveCount, cancelPickup, returnPickedUpPieceToTray, pickedUpPiece, transformPiece } = useGameStore()
   const { startGame, updateAnalysis } = useGameFlowActions()
   const currentAnalysis = useCurrentAnalysis()
   const showTutorial = useShowTutorial()
@@ -140,7 +140,7 @@ function App() {
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [pickedUpPiece, transformPiece, cancelPickup, returnPickedUpPieceToTray])
 
   const handlePlayAgain = () => {
     setShowWinModal(false)
@@ -156,6 +156,25 @@ function App() {
   const handleTutorialComplete = () => {
     setShowTutorialModal(false)
     toast.success('Tutorial Complete', 'You\'re ready to play!')
+  }
+
+  // Handle clicking in the tray area to put pieces back
+  const handleTrayAreaClick = (e: React.MouseEvent) => {
+    // Only handle if there's a picked up piece
+    if (!pickedUpPiece) return
+    
+    // Check if click is on a piece in tray or on the board - if so, don't handle here
+    const target = e.target as HTMLElement
+    
+    // Don't handle if clicking on a piece or the board
+    if (target.closest('[data-board="true"]') || 
+        target.closest('[role="button"]') ||
+        target.closest('.game-piece')) {
+      return
+    }
+    
+    // Put the piece back to tray (handles both tray and board pieces)
+    returnPickedUpPieceToTray()
   }
 
   return (
@@ -206,7 +225,10 @@ function App() {
         </div>
 
         {/* Game Container */}
-        <div className="game-container relative w-full max-w-7xl h-[600px] flex justify-center items-center">
+        <div 
+          className="game-container relative w-full max-w-7xl h-[600px] flex justify-center items-center"
+          onClick={handleTrayAreaClick}
+        >
           {/* Centered Game Board */}
           <GameBoard />
           
@@ -216,7 +238,7 @@ function App() {
 
         {/* Instructions */}
         <div className="instructions mt-8 text-center text-purple-700 opacity-70 text-base">
-          <p>Click pieces to pick up • Click board to place • Press R to rotate • Press F to flip • ESC to cancel • Click placed pieces to return</p>
+          <p>Click pieces to pick up • Click board to place • Click tray area to put back • Press R to rotate • Press F to flip • ESC to cancel • Click placed pieces to reposition</p>
         </div>
 
         {/* Modals */}

@@ -7,7 +7,6 @@ interface GamePieceProps {
   piece: GamePieceType
   state?: 'tray' | 'dragging' | 'placed' | 'ghost'
   onClick?: () => void
-  onTransform?: (rotate?: boolean, flip?: boolean) => void
   className?: string
   cellSize?: number // Size of each cell in pixels
   gapSize?: number // Gap between cells in pixels
@@ -17,7 +16,6 @@ export const GamePiece: React.FC<GamePieceProps> = ({
   piece,
   state = 'tray',
   onClick,
-  onTransform,
   className = '',
   cellSize = 24, // Default size for tray pieces
   gapSize = 2 // Default gap for tray pieces
@@ -80,20 +78,6 @@ export const GamePiece: React.FC<GamePieceProps> = ({
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!onTransform) return
-    
-    switch (e.key.toLowerCase()) {
-      case 'r':
-        e.preventDefault()
-        onTransform(true, false)
-        break
-      case 'f':
-        e.preventDefault()
-        onTransform(false, true)
-        break
-    }
-  }
 
   // Adjust cell size for different states - no more scaling since we're using consistent sizes
   const actualCellSize = cellSize
@@ -104,7 +88,6 @@ export const GamePiece: React.FC<GamePieceProps> = ({
     <div
       className={`relative inline-block ${getStateStyles()} ${className}`}
       onClick={onClick}
-      onKeyDown={handleKeyDown}
       tabIndex={0}
       role="button"
       aria-label={`Piece ${piece.shape}, value ${piece.value}, rotation ${piece.rotation}°${piece.flipped ? ', flipped' : ''}`}

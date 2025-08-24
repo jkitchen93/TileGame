@@ -37,7 +37,9 @@ interface GameStore extends GameState {
   
   // Click-to-pickup actions
   pickUpPiece: (piece: GamePiece) => void
+  pickUpPlacedPiece: (pieceId: string) => void
   cancelPickup: () => void
+  returnPickedUpPieceToTray: () => void
   isPickedUp: (pieceId: string) => boolean
 }
 
@@ -287,8 +289,80 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ pickedUpPiece: piece })
   },
 
+  pickUpPlacedPiece: (pieceId: string) => {
+    const state = get()
+    const placedPiece = state.placedPieces.find((p) => p.id === pieceId)
+    if (!placedPiece) return
+
+    // Remove from board and placed pieces
+    const newBoard = removePieceFromBoard(state.board, pieceId)
+    const newPlacedPieces = state.placedPieces.filter((p) => p.id !== pieceId)
+    
+    // Convert PlacedPiece back to GamePiece and set as picked up
+    const gamePiece: GamePiece = {
+      id: placedPiece.id,
+      shape: placedPiece.shape,
+      value: placedPiece.value,
+      rotation: placedPiece.rotation,
+      flipped: placedPiece.flipped
+    }
+    
+    // Update game state
+    const newMonominoCount = countMonominoes(newPlacedPieces)
+    const newCurrentSum = calculateSum(newPlacedPieces)
+    const newCoveredCells = getBoardCoverage(newBoard)
+    const newIsWon = state.level ? isWinCondition(newBoard, newPlacedPieces, state.level.target) : false
+    const newMoveCount = state.moveCount + 1
+
+    const newState = {
+      board: newBoard,
+      placedPieces: newPlacedPieces,
+      currentSum: newCurrentSum,
+      coveredCells: newCoveredCells,
+      monominoCount: newMonominoCount,
+      isWon: newIsWon,
+      moveCount: newMoveCount,
+      pickedUpPiece: gamePiece,
+      lastMoveValid: true,
+      lastMoveMessage: 'Piece picked up from board'
+    }
+
+    set(newState)
+    
+    // Schedule auto-save
+    scheduleAutoSave(
+      { ...state, ...newState },
+      { totalMoves: newMoveCount, undoCount: 0, timeElapsed: 0, hintsUsed: 0, puzzlesSolved: 0, averageMoves: 0, bestTime: 0 },
+      [],
+      -1,
+      0
+    )
+  },
+
   cancelPickup: () => {
     set({ pickedUpPiece: null })
+  },
+
+  returnPickedUpPieceToTray: () => {
+    const state = get()
+    if (!state.pickedUpPiece) return
+
+    // Check if the piece is already in the tray (was picked up from tray)
+    const isInTray = state.trayPieces.some(p => p.id === state.pickedUpPiece!.id)
+    
+    if (!isInTray) {
+      // Piece was picked up from the board, add it to tray
+      const newTrayPieces = [...state.trayPieces, state.pickedUpPiece]
+      set({
+        trayPieces: newTrayPieces,
+        pickedUpPiece: null,
+        lastMoveValid: true,
+        lastMoveMessage: 'Piece returned to tray'
+      })
+    } else {
+      // Piece was from tray, just cancel pickup
+      set({ pickedUpPiece: null })
+    }
   },
 
   isPickedUp: (pieceId: string) => {

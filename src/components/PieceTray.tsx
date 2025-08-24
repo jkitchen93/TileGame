@@ -12,27 +12,13 @@ interface PieceTrayItemProps {
 }
 
 const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
-  const { transformPiece, pickUpPiece, cancelPickup, isPickedUp, pickedUpPiece } = useGameStore()
+  const { pickUpPiece, cancelPickup, isPickedUp, pickedUpPiece } = useGameStore()
 
-  const handleTransform = (rotate?: boolean, flip?: boolean) => {
-    transformPiece(piece.id, rotate, flip)
-  }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    switch (e.key.toLowerCase()) {
-      case 'r':
-        e.preventDefault()
-        handleTransform(true, false)
-        break
-      case 'f':
-        e.preventDefault()
-        handleTransform(false, true)
-        break
-    }
-  }
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
+    e.stopPropagation() // Prevent bubbling to tray area click handler
     
     // If there's already a picked up piece that's different, cancel it first
     if (pickedUpPiece && pickedUpPiece.id !== piece.id) {
@@ -72,15 +58,13 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
     >
       <div 
         onClick={handleClick}
-        onKeyDown={handleKeyDown}
         tabIndex={0}
         role="button"
-        aria-label={`Clickable piece: ${piece.shape}, value ${piece.value}. Click to pick up. Press R to rotate, F to flip`}
+        aria-label={`Clickable piece: ${piece.shape}, value ${piece.value}. Click to pick up`}
       >
         <GamePiece
           piece={piece}
           state="tray"
-          onTransform={handleTransform}
           cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE}
           gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE}
           className="transition-all duration-200"

@@ -8,7 +8,7 @@ import { getTransformedShape } from '../utils/transforms'
 import GRID_CONSTANTS from '../constants/grid'
 
 export const GameBoard: React.FC = () => {
-  const { board, placedPieces, placePiece, returnPieceToTray, monominoCount, pickedUpPiece } = useGameStore()
+  const { board, placedPieces, placePiece, pickUpPlacedPiece, monominoCount, pickedUpPiece } = useGameStore()
   const [hoveredPosition, setHoveredPosition] = useState<{ row: number; col: number } | null>(null)
   const draggedPieceRef = useRef<GamePieceType | null>(null)
   const currentHoverPositionRef = useRef<{ row: number; col: number } | null>(null)
@@ -61,13 +61,11 @@ export const GameBoard: React.FC = () => {
 
       const boardRect = boardElement.getBoundingClientRect()
       
-      // Calculate board padding dynamically based on container size
-      const containerSize = 450 // From the fixed container size
-      const boardTotalSize = GRID_CONSTANTS.BOARD_TOTAL_WIDTH
-      const padding = (containerSize - boardTotalSize) / 2
+      // Use the actual padding from the board container style
+      const actualPadding = 25 // This matches the padding: '25px' in the board container
       
-      const relativeX = clientOffset.x - boardRect.left - padding
-      const relativeY = clientOffset.y - boardRect.top - padding
+      const relativeX = clientOffset.x - boardRect.left - actualPadding
+      const relativeY = clientOffset.y - boardRect.top - actualPadding
 
       // Calculate which grid cell we're hovering over
       const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
@@ -131,13 +129,11 @@ export const GameBoard: React.FC = () => {
     const boardElement = e.currentTarget
     const boardRect = boardElement.getBoundingClientRect()
     
-    // Calculate board padding dynamically based on container size
-    const containerSize = 450 // From the fixed container size
-    const boardTotalSize = GRID_CONSTANTS.BOARD_TOTAL_WIDTH
-    const padding = (containerSize - boardTotalSize) / 2
+    // Use the actual padding from the board container style
+    const actualPadding = 25 // This matches the padding: '25px' in the board container
     
-    const relativeX = e.clientX - boardRect.left - padding
-    const relativeY = e.clientY - boardRect.top - padding
+    const relativeX = e.clientX - boardRect.left - actualPadding
+    const relativeY = e.clientY - boardRect.top - actualPadding
 
     // Calculate which grid cell we're hovering over
     const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
@@ -154,6 +150,8 @@ export const GameBoard: React.FC = () => {
 
   // Handle clicking on the board container
   const handleBoardClick = (e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent bubbling to tray area click handler
+    
     // If there's a picked up piece, try to place it using hoveredPosition
     if (pickedUpPiece && hoveredPosition) {
       const success = placePiece(pickedUpPiece, hoveredPosition.row, hoveredPosition.col)
@@ -170,13 +168,11 @@ export const GameBoard: React.FC = () => {
       const boardElement = e.currentTarget
       const boardRect = boardElement.getBoundingClientRect()
       
-      // Calculate board padding dynamically based on container size
-      const containerSize = 450 // From the fixed container size
-      const boardTotalSize = GRID_CONSTANTS.BOARD_TOTAL_WIDTH
-      const padding = (containerSize - boardTotalSize) / 2
+      // Use the actual padding from the board container style
+      const actualPadding = 25 // This matches the padding: '25px' in the board container
       
-      const relativeX = e.clientX - boardRect.left - padding
-      const relativeY = e.clientY - boardRect.top - padding
+      const relativeX = e.clientX - boardRect.left - actualPadding
+      const relativeY = e.clientY - boardRect.top - actualPadding
 
       // Calculate which grid cell was clicked
       const cellWithGap = GRID_CONSTANTS.BOARD_CELL_SIZE + GRID_CONSTANTS.BOARD_GAP_SIZE
@@ -187,7 +183,7 @@ export const GameBoard: React.FC = () => {
       if (row >= 0 && row < 5 && col >= 0 && col < 5) {
         const cell = board[row]?.[col]
         if (cell?.pieceId) {
-          returnPieceToTray(cell.pieceId)
+          pickUpPlacedPiece(cell.pieceId)
         }
       }
     }
