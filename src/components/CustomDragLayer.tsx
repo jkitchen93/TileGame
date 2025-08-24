@@ -1,0 +1,49 @@
+import React from 'react'
+import { useDragLayer } from 'react-dnd'
+import { GamePiece as GamePieceType } from '../types'
+import GamePiece from './GamePiece'
+import GRID_CONSTANTS from '../constants/grid'
+
+const CustomDragLayer: React.FC = () => {
+  const {
+    item,
+    itemType,
+    isDragging,
+    currentOffset
+  } = useDragLayer((monitor: any) => ({
+    item: monitor.getItem(),
+    itemType: monitor.getItemType(),
+    isDragging: monitor.isDragging(),
+    currentOffset: monitor.getClientOffset()
+  }))
+
+  if (!isDragging || itemType !== 'piece' || !currentOffset) {
+    return null
+  }
+
+  const piece = item?.piece as GamePieceType
+  if (!piece) {
+    return null
+  }
+
+  return (
+    <div
+      className="fixed pointer-events-none z-[1000]"
+      style={{
+        left: currentOffset.x - 20, // Offset to center on cursor
+        top: currentOffset.y - 20,
+        transform: 'translate(-50%, -50%)'
+      }}
+    >
+      <GamePiece
+        piece={piece}
+        state="dragging"
+        cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE} // Use board cell size for dragging
+        gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE}
+        className="opacity-90 scale-110"
+      />
+    </div>
+  )
+}
+
+export default CustomDragLayer

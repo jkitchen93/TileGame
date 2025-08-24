@@ -3,6 +3,7 @@ import { useDrag } from 'react-dnd'
 import { useGameStore } from '../stores/gameStore'
 import { GamePiece as GamePieceType } from '../types'
 import GamePiece from './GamePiece'
+import GRID_CONSTANTS from '../constants/grid'
 
 interface DraggablePieceProps {
   piece: GamePieceType
@@ -11,13 +12,13 @@ interface DraggablePieceProps {
 const DraggablePiece: React.FC<DraggablePieceProps> = ({ piece }) => {
   const { transformPiece } = useGameStore()
 
-  const [{ isDragging }, drag] = useDrag({
+  const [{ isDragging }, drag] = useDrag(() => ({
     type: 'piece',
     item: { piece },
-    collect: (monitor) => ({
+    collect: (monitor: any) => ({
       isDragging: monitor.isDragging(),
     }),
-  })
+  }))
 
   const handleTransform = (rotate?: boolean, flip?: boolean) => {
     transformPiece(piece.id, rotate, flip)
@@ -38,19 +39,20 @@ const DraggablePiece: React.FC<DraggablePieceProps> = ({ piece }) => {
 
   return (
     <div
-      ref={drag}
-      className={`p-2 ${isDragging ? 'opacity-50' : 'opacity-100'} transition-opacity`}
+      ref={drag as any}
+      className={`${isDragging ? 'opacity-80' : 'opacity-100'} transition-opacity`}
       onKeyDown={handleKeyDown}
       tabIndex={0}
       role="button"
       aria-label={`Draggable piece: ${piece.shape}, value ${piece.value}. Press R to rotate, F to flip`}
-      aria-describedby="piece-controls"
     >
       <GamePiece
         piece={piece}
         state={isDragging ? 'dragging' : 'tray'}
         onTransform={handleTransform}
-        className="hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
+        cellSize={GRID_CONSTANTS.BOARD_CELL_SIZE} // Use board cell size for consistency
+        gapSize={GRID_CONSTANTS.BOARD_GAP_SIZE} // Use board gap size for consistency
+        className="transition-all duration-200"
       />
     </div>
   )
@@ -60,91 +62,63 @@ export const PieceTray: React.FC = () => {
   const { trayPieces, level } = useGameStore()
 
   if (!level) {
-    return (
-      <div className="text-center text-purple-600 p-8">
-        <p>Load a level to see available pieces</p>
-      </div>
-    )
+    return null
   }
 
   if (trayPieces.length === 0) {
-    return (
-      <div className="text-center text-purple-600 p-8">
-        <p>🎉 All pieces have been placed!</p>
-        <p className="text-sm opacity-75">Check if you've won the puzzle</p>
-      </div>
-    )
+    return null
   }
 
-  // Group pieces by shape for better organization
-  const groupedPieces = trayPieces.reduce((groups, piece) => {
-    if (!groups[piece.shape]) {
-      groups[piece.shape] = []
-    }
-    groups[piece.shape].push(piece)
-    return groups
-  }, {} as Record<string, GamePieceType[]>)
-
-  const shapeOrder = ['I1', 'I2', 'I3', 'L3', 'I4', 'O4', 'T4', 'L4', 'S4']
+  // Define scattered positions for pieces (adjusted for larger 48px cells)
+  const scatteredPositions = [
+    // T-piece (value 4) - top left (needs more space for 4-cell piece)
+    { left: '60px', top: '40px', transform: 'rotate(-8deg)' },
+    // L-piece (value 3) - top right  
+    { right: '80px', top: '60px', transform: 'rotate(12deg)' },
+    // I-piece (value 5) - left side (long piece needs space)
+    { left: '20px', top: '220px', transform: 'rotate(-5deg)' },
+    // O-piece (value 2) - bottom left (2x2 square)
+    { left: '120px', bottom: '80px', transform: 'rotate(7deg)' },
+    // S-piece (value 3) - right side
+    { right: '50px', top: '200px', transform: 'rotate(-10deg)' },
+    // I3-piece (value 2) - bottom right
+    { right: '100px', bottom: '120px', transform: 'rotate(15deg)' },
+    // L3-piece (value 2) - top center
+    { left: '50%', top: '30px', transform: 'translateX(-50%) rotate(-3deg)' },
+    // I2-piece (value 1) - left bottom
+    { left: '40px', bottom: '180px', transform: 'rotate(20deg)' },
+    // I2-piece (value 1) - right top
+    { right: '20px', top: '140px', transform: 'rotate(-15deg)' },
+    // I1-piece (value 5) - bottom center
+    { left: '48%', bottom: '50px', transform: 'translateX(-50%) rotate(5deg)' }
+  ]
 
   return (
-    <div className="bg-white rounded-cozy-lg shadow-cozy-lg p-6 border-2 border-purple-200">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold text-purple-800">Piece Tray</h2>
-        <div className="text-sm text-purple-600">
-          {trayPieces.length} piece{trayPieces.length !== 1 ? 's' : ''} remaining
-        </div>
-      </div>
-
-      {/* Pieces organized by shape */}
-      <div className="space-y-4">
-        {shapeOrder.map(shape => {
-          const pieces = groupedPieces[shape]
-          if (!pieces || pieces.length === 0) return null
-
-          return (
-            <div key={shape} className="space-y-2">
-              <div className="text-xs font-medium text-purple-700 uppercase tracking-wide">
-                {shape} ({pieces.length})
-              </div>
-              <div className="flex flex-wrap gap-3 p-3 bg-purple-50 rounded-cozy">
-                {pieces.map(piece => (
-                  <DraggablePiece key={piece.id} piece={piece} />
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {/* Transform instructions */}
-      <div id="piece-controls" className="mt-6 p-3 bg-pastel-purple-100 rounded-cozy text-sm text-purple-700">
-        <div className="font-medium mb-1">Piece Controls:</div>
-        <div className="space-y-1 text-xs">
-          <div><kbd className="px-1 py-0.5 bg-white rounded text-purple-800">R</kbd> - Rotate piece 90°</div>
-          <div><kbd className="px-1 py-0.5 bg-white rounded text-purple-800">F</kbd> - Flip piece horizontally</div>
-          <div className="opacity-75">Focus a piece and use keyboard, or drag to board</div>
-        </div>
-      </div>
-
-      {/* Piece count summary */}
-      <div className="mt-4 pt-4 border-t border-purple-200">
-        <div className="grid grid-cols-3 gap-2 text-xs text-purple-600">
-          <div className="text-center">
-            <div className="font-medium text-purple-800">{trayPieces.filter(p => p.shape === 'I1').length}</div>
-            <div>Monominoes</div>
+    <>
+      {trayPieces.map((piece, index) => {
+        const position = scatteredPositions[index] || { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+        
+        return (
+          <div
+            key={piece.id}
+            className="absolute z-20 cursor-grab transition-transform duration-200 hover:scale-105 hover:z-100"
+            style={{
+              ...position,
+              transform: `${position.transform || ''}`,
+              filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = `${position.transform || ''} scale(1.05) rotate(0deg)`
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = position.transform || ''
+            }}
+          >
+            <DraggablePiece piece={piece} />
           </div>
-          <div className="text-center">
-            <div className="font-medium text-purple-800">{trayPieces.filter(p => ['I2', 'I3', 'L3'].includes(p.shape)).length}</div>
-            <div>Small Pieces</div>
-          </div>
-          <div className="text-center">
-            <div className="font-medium text-purple-800">{trayPieces.filter(p => ['I4', 'O4', 'T4', 'L4', 'S4'].includes(p.shape)).length}</div>
-            <div>Tetrominoes</div>
-          </div>
-        </div>
-      </div>
-    </div>
+        )
+      })}
+    </>
   )
 }
 

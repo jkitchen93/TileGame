@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cozy PolySum - UI Mockup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fce7f3 0%, #e9d5ff 50%, #dbeafe 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Game Title and HUD */
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+            z-index: 10;
+            position: relative;
+        }
+
+        .game-title {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(192, 132, 252, 0.2);
+        }
+
+        .game-subtitle {
+            font-size: 1.2rem;
+            color: #9333ea;
+            opacity: 0.8;
+        }
+
+        /* Score Display */
+        .score-display {
+            background: white;
+            border-radius: 20px;
+            padding: 15px 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            display: inline-flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .score-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .score-label {
+            font-size: 0.9rem;
+            color: #9333ea;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .score-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #7c3aed;
+        }
+
+        /* Game Board Container */
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 1400px;
+            height: 600px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Game Board */
+        .game-board {
+            width: 450px;
+            height: 450px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 
+                0 20px 40px rgba(147, 51, 234, 0.15),
+                0 10px 20px rgba(147, 51, 234, 0.1);
+            padding: 25px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 8px;
+            z-index: 10;
+            position: relative;
+        }
+
+        .board-cell {
+            background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+            border: 2px dashed #e9d5ff;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .board-cell.drag-over {
+            background: linear-gradient(135deg, #bbf7d0, #86efac);
+            border-color: #4ade80;
+            transform: scale(0.95);
+        }
+
+        .board-cell.occupied {
+            background: transparent;
+            border: 2px solid transparent;
+            opacity: 0;
+        }
+
+        /* Polyomino Pieces */
+        .piece {
+            position: absolute;
+            display: grid;
+            gap: 0;
+            cursor: grab;
+            z-index: 20;
+            transition: transform 0.2s ease;
+        }
+
+        .piece:hover {
+            transform: scale(1.05) rotate(0deg) !important;
+            z-index: 100;
+        }
+
+        .piece.dragging {
+            opacity: 0.8;
+            cursor: grabbing;
+            z-index: 1000;
+            transform: scale(1.1) rotate(0deg) !important;
+        }
+
+        .piece-cell {
+            width: 35px;
+            height: 35px;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .piece-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+            font-size: 1.4rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+        }
+
+        /* Piece Colors - solid unified pieces */
+        .piece-pink .piece-cell.filled { 
+            background: linear-gradient(135deg, #f472b6, #ec4899);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .piece-purple .piece-cell.filled { 
+            background: linear-gradient(135deg, #c084fc, #a855f7);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .piece-blue .piece-cell.filled { 
+            background: linear-gradient(135deg, #60a5fa, #3b82f6);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .piece-green .piece-cell.filled { 
+            background: linear-gradient(135deg, #4ade80, #22c55e);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .piece-yellow .piece-cell.filled { 
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .piece-coral .piece-cell.filled { 
+            background: linear-gradient(135deg, #fb923c, #f97316);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Piece Shapes */
+        .piece-t4 { grid-template-columns: repeat(3, 35px); grid-template-rows: repeat(2, 35px); }
+        .piece-l4 { grid-template-columns: repeat(3, 35px); grid-template-rows: repeat(2, 35px); }
+        .piece-i4 { grid-template-columns: repeat(4, 35px); grid-template-rows: repeat(1, 35px); }
+        .piece-o4 { grid-template-columns: repeat(2, 35px); grid-template-rows: repeat(2, 35px); }
+        .piece-s4 { grid-template-columns: repeat(3, 35px); grid-template-rows: repeat(2, 35px); }
+        .piece-i3 { grid-template-columns: repeat(3, 35px); grid-template-rows: repeat(1, 35px); }
+        .piece-l3 { grid-template-columns: repeat(2, 35px); grid-template-rows: repeat(2, 35px); }
+        .piece-i2 { grid-template-columns: repeat(2, 35px); grid-template-rows: repeat(1, 35px); }
+        .piece-i1 { grid-template-columns: repeat(1, 35px); grid-template-rows: repeat(1, 35px); }
+
+        /* Instructions */
+        .instructions {
+            margin-top: 30px;
+            text-align: center;
+            color: #7c3aed;
+            opacity: 0.7;
+            font-size: 0.95rem;
+        }
+
+        /* Placed pieces on board */
+        .piece.placed {
+            gap: 0;
+            cursor: pointer;
+        }
+
+        .piece.placed .piece-cell {
+            /* Each cell should be grid cell size + gap to cover the spaces */
+            width: calc((450px - 50px) / 5);
+            height: calc((450px - 50px) / 5);
+        }
+        
+        .piece.placed .piece-cell.filled {
+            box-shadow: none;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Game Header -->
+    <div class="game-header">
+        <h1 class="game-title">Cozy PolySum</h1>
+        <p class="game-subtitle">Daily Puzzle #42</p>
+        
+        <div class="score-display">
+            <div class="score-item">
+                <span class="score-label">Target</span>
+                <span class="score-value">28</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Current</span>
+                <span class="score-value" id="current-score" style="color: #f472b6;">0</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">Coverage</span>
+                <span class="score-value" id="coverage" style="color: #4ade80;">0/25</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Container -->
+    <div class="game-container">
+        <!-- Game Board -->
+        <div class="game-board" id="game-board">
+            <!-- 25 cells for 5x5 grid -->
+            <div class="board-cell" data-row="0" data-col="0"></div>
+            <div class="board-cell" data-row="0" data-col="1"></div>
+            <div class="board-cell" data-row="0" data-col="2"></div>
+            <div class="board-cell" data-row="0" data-col="3"></div>
+            <div class="board-cell" data-row="0" data-col="4"></div>
+            <div class="board-cell" data-row="1" data-col="0"></div>
+            <div class="board-cell" data-row="1" data-col="1"></div>
+            <div class="board-cell" data-row="1" data-col="2"></div>
+            <div class="board-cell" data-row="1" data-col="3"></div>
+            <div class="board-cell" data-row="1" data-col="4"></div>
+            <div class="board-cell" data-row="2" data-col="0"></div>
+            <div class="board-cell" data-row="2" data-col="1"></div>
+            <div class="board-cell" data-row="2" data-col="2"></div>
+            <div class="board-cell" data-row="2" data-col="3"></div>
+            <div class="board-cell" data-row="2" data-col="4"></div>
+            <div class="board-cell" data-row="3" data-col="0"></div>
+            <div class="board-cell" data-row="3" data-col="1"></div>
+            <div class="board-cell" data-row="3" data-col="2"></div>
+            <div class="board-cell" data-row="3" data-col="3"></div>
+            <div class="board-cell" data-row="3" data-col="4"></div>
+            <div class="board-cell" data-row="4" data-col="0"></div>
+            <div class="board-cell" data-row="4" data-col="1"></div>
+            <div class="board-cell" data-row="4" data-col="2"></div>
+            <div class="board-cell" data-row="4" data-col="3"></div>
+            <div class="board-cell" data-row="4" data-col="4"></div>
+        </div>
+
+        <!-- Scattered Pieces -->
+        
+        <!-- T-piece (value 4) - top left -->
+        <div class="piece piece-purple piece-t4" draggable="true" data-value="4" data-shape="t4" style="left: 80px; top: 50px; transform: rotate(-8deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell"></div>
+            <span class="piece-value">4</span>
+        </div>
+
+        <!-- L-piece (value 3) - top right -->
+        <div class="piece piece-pink piece-l4" draggable="true" data-value="3" data-shape="l4" style="right: 120px; top: 80px; transform: rotate(12deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell"></div>
+            <div class="piece-cell"></div>
+            <span class="piece-value">3</span>
+        </div>
+
+        <!-- I-piece (value 5) - left side -->
+        <div class="piece piece-blue piece-i4" draggable="true" data-value="5" data-shape="i4" style="left: 40px; top: 280px; transform: rotate(-5deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <span class="piece-value">5</span>
+        </div>
+
+        <!-- O-piece (value 2) - bottom left -->
+        <div class="piece piece-green piece-o4" draggable="true" data-value="2" data-shape="o4" style="left: 150px; bottom: 60px; transform: rotate(7deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <span class="piece-value">2</span>
+        </div>
+
+        <!-- S-piece (value 3) - right side -->
+        <div class="piece piece-yellow piece-s4" draggable="true" data-value="3" data-shape="s4" style="right: 80px; top: 250px; transform: rotate(-10deg);">
+            <div class="piece-cell"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell"></div>
+            <span class="piece-value">3</span>
+        </div>
+
+        <!-- I3-piece (value 2) - bottom right -->
+        <div class="piece piece-coral piece-i3" draggable="true" data-value="2" data-shape="i3" style="right: 140px; bottom: 100px; transform: rotate(15deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <span class="piece-value">2</span>
+        </div>
+
+        <!-- L3-piece (value 2) - top -->
+        <div class="piece piece-blue piece-l3" draggable="true" data-value="2" data-shape="l3" style="left: 50%; top: 20px; transform: translateX(-50%) rotate(-3deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell"></div>
+            <span class="piece-value">2</span>
+        </div>
+
+        <!-- I2-piece (value 1) - left bottom -->
+        <div class="piece piece-green piece-i2" draggable="true" data-value="1" data-shape="i2" style="left: 60px; bottom: 140px; transform: rotate(20deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <span class="piece-value">1</span>
+        </div>
+
+        <!-- I2-piece (value 1) - right top -->
+        <div class="piece piece-purple piece-i2" draggable="true" data-value="1" data-shape="i2" style="right: 60px; top: 160px; transform: rotate(-15deg);">
+            <div class="piece-cell filled"></div>
+            <div class="piece-cell filled"></div>
+            <span class="piece-value">1</span>
+        </div>
+
+        <!-- I1-piece (value 5) - bottom -->
+        <div class="piece piece-pink piece-i1" draggable="true" data-value="5" data-shape="i1" style="left: 48%; bottom: 30px; transform: translateX(-50%) rotate(5deg);">
+            <div class="piece-cell filled"></div>
+            <span class="piece-value">5</span>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+        <p>Drag pieces to the board • Press R to rotate • Press F to flip • Click placed pieces to return</p>
+    </div>
+
+    <script>
+        // Game state
+        let draggedPiece = null;
+        let originalPosition = null;
+        let placedPieces = new Map();
+        let boardState = Array(5).fill().map(() => Array(5).fill(null));
+
+        // Initialize drag and drop
+        document.querySelectorAll('.piece').forEach(piece => {
+            piece.addEventListener('dragstart', handleDragStart);
+            piece.addEventListener('dragend', handleDragEnd);
+            piece.addEventListener('click', handlePieceClick);
+        });
+
+        document.querySelectorAll('.board-cell').forEach(cell => {
+            cell.addEventListener('dragover', handleDragOver);
+            cell.addEventListener('drop', handleDrop);
+            cell.addEventListener('dragleave', handleDragLeave);
+        });
+
+        function handleDragStart(e) {
+            draggedPiece = e.target;
+            originalPosition = {
+                left: draggedPiece.style.left,
+                right: draggedPiece.style.right,
+                top: draggedPiece.style.top,
+                bottom: draggedPiece.style.bottom,
+                transform: draggedPiece.style.transform
+            };
+            
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            if (!e.currentTarget.classList.contains('occupied')) {
+                e.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedPiece || e.currentTarget.classList.contains('occupied')) return;
+            
+            const cell = e.currentTarget;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            
+            // Check if piece was already placed and remove from old position
+            if (placedPieces.has(draggedPiece)) {
+                const oldPos = placedPieces.get(draggedPiece);
+                clearBoardPosition(oldPos.row, oldPos.col, draggedPiece.dataset.shape);
+            }
+            
+            // Place piece on board
+            if (placePieceOnBoard(row, col, draggedPiece)) {
+                // Calculate the board and cell positions
+                const board = document.getElementById('game-board');
+                const boardRect = board.getBoundingClientRect();
+                const boardStyle = window.getComputedStyle(board);
+                const boardPadding = parseFloat(boardStyle.padding);
+                
+                // Calculate total cell size (including gap)
+                const totalCellSize = (450 - (boardPadding * 2)) / 5;
+                
+                // Calculate piece position to align with grid
+                const pieceLeft = boardPadding + (col * totalCellSize);
+                const pieceTop = boardPadding + (row * totalCellSize);
+                
+                // Position the piece relative to the game container
+                const container = document.querySelector('.game-container');
+                const containerRect = container.getBoundingClientRect();
+                
+                draggedPiece.style.left = (boardRect.left - containerRect.left + pieceLeft) + 'px';
+                draggedPiece.style.top = (boardRect.top - containerRect.top + pieceTop) + 'px';
+                draggedPiece.style.right = 'auto';
+                draggedPiece.style.bottom = 'auto';
+                draggedPiece.style.transform = 'rotate(0deg)';
+                draggedPiece.classList.add('placed');
+                
+                // Store placement info
+                placedPieces.set(draggedPiece, { row, col });
+                
+                // Update score
+                updateScore();
+            }
+            
+            draggedPiece = null;
+        }
+
+        function handlePieceClick(e) {
+            const piece = e.currentTarget;
+            if (placedPieces.has(piece)) {
+                // Return piece to original position
+                const oldPos = placedPieces.get(piece);
+                clearBoardPosition(oldPos.row, oldPos.col, piece.dataset.shape);
+                
+                // Reset visual position
+                const original = piece.dataset.originalPosition;
+                if (original) {
+                    const pos = JSON.parse(original);
+                    Object.assign(piece.style, pos);
+                }
+                
+                piece.classList.remove('placed');
+                placedPieces.delete(piece);
+                
+                // Update score
+                updateScore();
+            }
+        }
+
+        function placePieceOnBoard(row, col, piece) {
+            const shape = piece.dataset.shape;
+            const cells = getPieceCells(shape);
+            
+            // Check if placement is valid
+            for (const [dr, dc] of cells) {
+                const newRow = row + dr;
+                const newCol = col + dc;
+                
+                if (newRow < 0 || newRow >= 5 || newCol < 0 || newCol >= 5) {
+                    return false; // Out of bounds
+                }
+                
+                if (boardState[newRow][newCol] !== null) {
+                    return false; // Cell already occupied
+                }
+            }
+            
+            // Place piece
+            for (const [dr, dc] of cells) {
+                boardState[row + dr][col + dc] = piece.dataset.value;
+                const boardCell = document.querySelector(`[data-row="${row + dr}"][data-col="${col + dc}"]`);
+                if (boardCell) {
+                    boardCell.classList.add('occupied');
+                }
+            }
+            
+            return true;
+        }
+
+        function clearBoardPosition(row, col, shape) {
+            const cells = getPieceCells(shape);
+            
+            for (const [dr, dc] of cells) {
+                const r = row + dr;
+                const c = col + dc;
+                if (r >= 0 && r < 5 && c >= 0 && c < 5) {
+                    boardState[r][c] = null;
+                    const boardCell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+                    if (boardCell) {
+                        boardCell.classList.remove('occupied');
+                    }
+                }
+            }
+        }
+
+        function getPieceCells(shape) {
+            const shapes = {
+                't4': [[0, 0], [0, 1], [0, 2], [1, 1]],
+                'l4': [[0, 0], [0, 1], [0, 2], [1, 0]],
+                'i4': [[0, 0], [0, 1], [0, 2], [0, 3]],
+                'o4': [[0, 0], [0, 1], [1, 0], [1, 1]],
+                's4': [[0, 1], [0, 2], [1, 0], [1, 1]],
+                'i3': [[0, 0], [0, 1], [0, 2]],
+                'l3': [[0, 0], [0, 1], [1, 0]],
+                'i2': [[0, 0], [0, 1]],
+                'i1': [[0, 0]]
+            };
+            
+            return shapes[shape] || [];
+        }
+
+        function updateScore() {
+            let sum = 0;
+            let coverage = 0;
+            
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 5; c++) {
+                    if (boardState[r][c] !== null) {
+                        sum += parseInt(boardState[r][c]);
+                        coverage++;
+                    }
+                }
+            }
+            
+            document.getElementById('current-score').textContent = sum;
+            document.getElementById('coverage').textContent = `${coverage}/25`;
+            
+            // Update color based on target
+            const target = 28;
+            const scoreEl = document.getElementById('current-score');
+            if (sum === target && coverage === 25) {
+                scoreEl.style.color = '#4ade80';
+            } else if (sum > target) {
+                scoreEl.style.color = '#ef4444';
+            } else {
+                scoreEl.style.color = '#f472b6';
+            }
+        }
+
+        // Store original positions
+        document.querySelectorAll('.piece').forEach(piece => {
+            piece.dataset.originalPosition = JSON.stringify({
+                left: piece.style.left,
+                right: piece.style.right,
+                top: piece.style.top,
+                bottom: piece.style.bottom,
+                transform: piece.style.transform
+            });
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'r') {
+                // Rotate functionality would go here
+                console.log('Rotate key pressed');
+            } else if (e.key.toLowerCase() === 'f') {
+                // Flip functionality would go here
+                console.log('Flip key pressed');
+            }
+        });
+    </script>
+</body>
+</html>

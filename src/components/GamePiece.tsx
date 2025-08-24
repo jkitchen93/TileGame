@@ -9,6 +9,8 @@ interface GamePieceProps {
   onClick?: () => void
   onTransform?: (rotate?: boolean, flip?: boolean) => void
   className?: string
+  cellSize?: number // Size of each cell in pixels
+  gapSize?: number // Gap between cells in pixels
 }
 
 export const GamePiece: React.FC<GamePieceProps> = ({
@@ -16,7 +18,9 @@ export const GamePiece: React.FC<GamePieceProps> = ({
   state = 'tray',
   onClick,
   onTransform,
-  className = ''
+  className = '',
+  cellSize = 24, // Default size for tray pieces
+  gapSize = 2 // Default gap for tray pieces
 }) => {
   const baseShape = getPolyominoShape(piece.shape)
   const transformedShape = getTransformedShape(baseShape, piece.rotation, piece.flipped)
@@ -29,32 +33,50 @@ export const GamePiece: React.FC<GamePieceProps> = ({
   const width = maxX - minX + 1
   const height = maxY - minY + 1
 
-  // Color based on piece value with pastel theme
+  // Color based on piece value with gradient backgrounds matching mockup
   const getValueColor = (value: number) => {
     switch (value) {
-      case 1: return 'bg-pastel-blue-200'
-      case 2: return 'bg-pastel-green-200'
-      case 3: return 'bg-pastel-yellow-200'
-      case 4: return 'bg-pastel-pink-200'
-      case 5: return 'bg-pastel-purple-200'
-      case 6: return 'bg-pastel-blue-300'
-      case 7: return 'bg-pastel-green-300'
-      case 8: return 'bg-pastel-yellow-300'
-      case 9: return 'bg-pastel-pink-300'
-      default: return 'bg-pastel-purple-300'
+      case 1: return { 
+        className: 'piece-blue', 
+        style: { background: 'linear-gradient(135deg, #60a5fa, #3b82f6)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }
+      }
+      case 2: return { 
+        className: 'piece-green', 
+        style: { background: 'linear-gradient(135deg, #4ade80, #22c55e)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }
+      }
+      case 3: return { 
+        className: 'piece-yellow', 
+        style: { background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }
+      }
+      case 4: return { 
+        className: 'piece-purple', 
+        style: { background: 'linear-gradient(135deg, #c084fc, #a855f7)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }
+      }
+      case 5: return { 
+        className: 'piece-pink', 
+        style: { background: 'linear-gradient(135deg, #f472b6, #ec4899)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }
+      }
+      case 6: return { 
+        className: 'piece-coral', 
+        style: { background: 'linear-gradient(135deg, #fb923c, #f97316)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }
+      }
+      default: return { 
+        className: 'piece-purple', 
+        style: { background: 'linear-gradient(135deg, #c084fc, #a855f7)', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)' }
+      }
     }
   }
 
   const getStateStyles = () => {
     switch (state) {
       case 'dragging':
-        return 'opacity-75 scale-110 z-50'
+        return 'opacity-0' // Hide the original piece during drag since CustomDragLayer shows it
       case 'ghost':
-        return 'opacity-50 border-2 border-pastel-green-400 bg-transparent'
+        return 'opacity-50 border-2 border-green-400 bg-transparent'
       case 'placed':
         return 'cursor-pointer hover:scale-105 transition-transform'
       default:
-        return 'cursor-grab hover:scale-105 transition-transform'
+        return 'cursor-grab hover:scale-105 hover:z-100 transition-all duration-200'
     }
   }
 
@@ -73,8 +95,10 @@ export const GamePiece: React.FC<GamePieceProps> = ({
     }
   }
 
-  const cellSize = state === 'dragging' ? 'w-8 h-8' : 'w-6 h-6'
-  const valueColor = getValueColor(piece.value)
+  // Adjust cell size for different states - no more scaling since we're using consistent sizes
+  const actualCellSize = cellSize
+  const actualGapSize = gapSize
+  const colorInfo = getValueColor(piece.value)
 
   return (
     <div
@@ -87,33 +111,39 @@ export const GamePiece: React.FC<GamePieceProps> = ({
     >
       {/* Piece grid container */}
       <div
-        className="relative"
+        className="grid"
         style={{
-          width: `${width * (state === 'dragging' ? 32 : 24)}px`,
-          height: `${height * (state === 'dragging' ? 32 : 24)}px`
+          gridTemplateColumns: `repeat(${width}, ${actualCellSize}px)`,
+          gridTemplateRows: `repeat(${height}, ${actualCellSize}px)`,
+          gap: `${actualGapSize}px`
         }}
       >
         {/* Render each cell of the piece */}
         {transformedShape.map((coord, index) => (
           <div
             key={index}
-            className={`absolute ${cellSize} ${state === 'ghost' ? 'border-2 border-pastel-green-400' : valueColor} rounded-cozy shadow-cozy transition-all duration-200`}
+            className={`${state === 'ghost' ? 'border-2 border-green-400' : colorInfo.className} rounded-md transition-all duration-200`}
             style={{
-              left: `${(coord.x - minX) * (state === 'dragging' ? 32 : 24)}px`,
-              top: `${(coord.y - minY) * (state === 'dragging' ? 32 : 24)}px`,
+              gridColumn: coord.x - minX + 1,
+              gridRow: coord.y - minY + 1,
+              width: `${actualCellSize}px`,
+              height: `${actualCellSize}px`,
+              ...(state !== 'ghost' ? colorInfo.style : {})
             }}
           />
         ))}
 
         {/* Value overlay - only show on first cell */}
-        {state !== 'ghost' && (
+        {state !== 'ghost' && transformedShape.length > 0 && (
           <div
-            className="absolute flex items-center justify-center text-xs font-bold text-purple-800 pointer-events-none"
+            className="absolute flex items-center justify-center font-bold text-white pointer-events-none"
             style={{
-              left: `${0 * (state === 'dragging' ? 32 : 24)}px`,
-              top: `${0 * (state === 'dragging' ? 32 : 24)}px`,
-              width: `${state === 'dragging' ? 32 : 24}px`,
-              height: `${state === 'dragging' ? 32 : 24}px`
+              left: '0',
+              top: '0',
+              width: `${actualCellSize}px`,
+              height: `${actualCellSize}px`,
+              fontSize: `${Math.max(actualCellSize * 0.4, 14)}px`,
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
             }}
           >
             {piece.value}
@@ -121,12 +151,6 @@ export const GamePiece: React.FC<GamePieceProps> = ({
         )}
       </div>
 
-      {/* Transform indicators for tray pieces */}
-      {state === 'tray' && onTransform && (
-        <div className="absolute -bottom-6 left-0 text-xs text-purple-600 space-x-2">
-          <span className="opacity-60">R:rotate F:flip</span>
-        </div>
-      )}
     </div>
   )
 }

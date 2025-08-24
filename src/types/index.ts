@@ -22,6 +22,8 @@ export interface BoardCell {
   row: number
   col: number
   pieceId?: string
+  pieceValue?: number
+  pieceShape?: PolyominoShape
 }
 
 export interface GameLevel {
@@ -41,7 +43,7 @@ export interface PlacementResult {
 export interface GameState {
   level: GameLevel | null
   board: BoardCell[][]
-  placedPieces: GamePiece[]
+  placedPieces: PlacedPiece[]
   trayPieces: GamePiece[]
   currentSum: number
   coveredCells: number

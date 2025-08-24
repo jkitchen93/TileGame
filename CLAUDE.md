@@ -111,6 +111,15 @@ Building a local browser-based daily puzzle game that blends polyomino tiling wi
 - R to rotate, F to flip, click to return piece to tray
 - Subtle animations, respect "reduced motion" preference
 
+## Visual Design Reference
+**Layout**: Clean centered vertical layout with board at top, piece tray below
+**Grid Alignment**: Pieces must fit exactly onto grid cells with perfect proportions - no distortion or stretching
+**Board**: 5×5 grid with consistent cell sizing, soft purple borders, white background with rounded container
+**Pieces**: Colored blocks that snap cleanly to grid cells, each showing numeric value overlay
+**Color Palette**: Blue (value 1-2), green (value 2-3), soft pastels throughout with purple accents
+**Spacing**: Consistent gaps between grid cells and piece blocks for clean visual hierarchy
+**Interaction**: Drag from tray with hover preview showing exact grid placement in green/red
+
 ## Performance Targets
 - 60fps interactions on desktop
 - Initial load <2s on broadband

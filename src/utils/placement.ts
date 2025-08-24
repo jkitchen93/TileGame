@@ -152,7 +152,7 @@ export function removePieceFromBoard(
   return board.map(row =>
     row.map(cell =>
       cell.pieceId === pieceId
-        ? { ...cell, pieceId: undefined }
+        ? { ...cell, pieceId: undefined, pieceValue: undefined, pieceShape: undefined }
         : cell
     )
   )
@@ -170,6 +170,8 @@ export function placePieceOnBoard(
   for (const cell of occupiedCells) {
     if (cell.y >= 0 && cell.y < 5 && cell.x >= 0 && cell.x < 5) {
       newBoard[cell.y][cell.x].pieceId = piece.id
+      newBoard[cell.y][cell.x].pieceValue = piece.value
+      newBoard[cell.y][cell.x].pieceShape = piece.shape
     }
   }
   

@@ -1,22 +1,36 @@
 import { create } from 'zustand'
-import { GameState, GameLevel, GamePiece } from '../types'
+import { GameState, GameLevel, GamePiece, PlacedPiece } from '../types'
 import { 
-  isValidPlacement, 
   placePieceOnBoard, 
   removePieceFromBoard, 
   getBoardCoverage, 
   calculateSum, 
   countMonominoes, 
-  isWinCondition 
+  isWinCondition,
+  getOccupiedCells
 } from '../utils/placement'
+import { analyzeWinCondition } from '../utils/winConditions'
+import { validateGameRules, generateMoveValidationFeedback } from '../utils/gameRules'
+import { scheduleAutoSave } from '../utils/persistence'
 
 interface GameStore extends GameState {
+  // Enhanced state
+  lastMoveValid: boolean
+  lastMoveMessage: string
+  moveCount: number
+  
+  // Actions
   loadLevel: (level: GameLevel) => void
   placePiece: (piece: GamePiece, row: number, col: number) => boolean
   returnPieceToTray: (pieceId: string) => void
   transformPiece: (pieceId: string, rotate?: boolean, flip?: boolean) => void
   resetGame: () => void
   updateGameState: () => void
+  
+  // Enhanced actions
+  validatePlacement: (piece: GamePiece, row: number, col: number) => { valid: boolean; message: string }
+  getGameAnalysis: () => ReturnType<typeof analyzeWinCondition> | null
+  incrementMoveCount: () => void
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -28,6 +42,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   coveredCells: 0,
   monominoCount: 0,
   isWon: false,
+  lastMoveValid: true,
+  lastMoveMessage: '',
+  moveCount: 0,
 
   loadLevel: (level: GameLevel) => {
     const board = Array(5)
@@ -47,6 +64,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       coveredCells: 0,
       monominoCount: 0,
       isWon: false,
+      lastMoveValid: true,
+      lastMoveMessage: '',
+      moveCount: 0,
     })
   },
 
@@ -55,70 +75,127 @@ export const useGameStore = create<GameStore>((set, get) => ({
     
     if (!state.level) return false
     
-    const placementResult = isValidPlacement(
-      piece,
-      row,
-      col,
-      state.board,
-      state.placedPieces,
-      state.monominoCount
-    )
+    // Enhanced validation using new game rules
+    const ruleCheck = validateGameRules(piece, row, col, state.board, state.placedPieces, state.level)
+    const feedback = generateMoveValidationFeedback(ruleCheck)
     
-    if (!placementResult.valid) {
-      console.warn('Invalid placement:', placementResult.reason)
+    if (!ruleCheck.valid) {
+      set({
+        lastMoveValid: false,
+        lastMoveMessage: feedback.message
+      })
       return false
     }
     
     const newBoard = placePieceOnBoard(state.board, piece, row, col)
-    const newPlacedPieces = [...state.placedPieces, piece]
+    
+    // Create PlacedPiece with position and occupied cells
+    const placedPiece: PlacedPiece = {
+      ...piece,
+      position: { x: col, y: row },
+      occupiedCells: getOccupiedCells(piece, row, col)
+    }
+    
+    const newPlacedPieces = [...state.placedPieces, placedPiece]
     const newTrayPieces = state.trayPieces.filter(p => p.id !== piece.id)
     
     const newMonominoCount = countMonominoes(newPlacedPieces)
     const newCurrentSum = calculateSum(newPlacedPieces)
     const newCoveredCells = getBoardCoverage(newBoard)
     const newIsWon = isWinCondition(newBoard, newPlacedPieces, state.level.target)
+    const newMoveCount = state.moveCount + 1
     
-    set({
+    const newState = {
       board: newBoard,
       placedPieces: newPlacedPieces,
       trayPieces: newTrayPieces,
       currentSum: newCurrentSum,
       coveredCells: newCoveredCells,
       monominoCount: newMonominoCount,
-      isWon: newIsWon
-    })
+      isWon: newIsWon,
+      lastMoveValid: true,
+      lastMoveMessage: feedback.message,
+      moveCount: newMoveCount
+    }
+    
+    set(newState)
+    
+    // Schedule auto-save with enhanced state
+    scheduleAutoSave(
+      { ...state, ...newState }, // Full game state
+      { totalMoves: newMoveCount, undoCount: 0, timeElapsed: 0, hintsUsed: 0, puzzlesSolved: 0, averageMoves: 0, bestTime: 0 }, // Basic stats
+      [], // Move history (would come from game flow store)
+      -1, // Current move index
+      0 // Elapsed time
+    )
     
     return true
   },
 
   returnPieceToTray: (pieceId: string) => {
     const state = get()
-    const piece = state.placedPieces.find((p) => p.id === pieceId)
-    if (!piece) return
+    const placedPiece = state.placedPieces.find((p) => p.id === pieceId)
+    if (!placedPiece) return
 
     const newBoard = removePieceFromBoard(state.board, pieceId)
     const newPlacedPieces = state.placedPieces.filter((p) => p.id !== pieceId)
-    const newTrayPieces = [...state.trayPieces, piece]
+    
+    // Convert PlacedPiece back to GamePiece for the tray
+    const gamePiece: GamePiece = {
+      id: placedPiece.id,
+      shape: placedPiece.shape,
+      value: placedPiece.value,
+      rotation: placedPiece.rotation,
+      flipped: placedPiece.flipped
+    }
+    const newTrayPieces = [...state.trayPieces, gamePiece]
     
     const newMonominoCount = countMonominoes(newPlacedPieces)
     const newCurrentSum = calculateSum(newPlacedPieces)
     const newCoveredCells = getBoardCoverage(newBoard)
     const newIsWon = state.level ? isWinCondition(newBoard, newPlacedPieces, state.level.target) : false
+    const newMoveCount = state.moveCount + 1
 
-    set({
+    const newState = {
       board: newBoard,
       placedPieces: newPlacedPieces,
       trayPieces: newTrayPieces,
       currentSum: newCurrentSum,
       coveredCells: newCoveredCells,
       monominoCount: newMonominoCount,
-      isWon: newIsWon
-    })
+      isWon: newIsWon,
+      moveCount: newMoveCount,
+      lastMoveValid: true,
+      lastMoveMessage: 'Piece returned to tray'
+    }
+
+    set(newState)
+    
+    // Schedule auto-save
+    scheduleAutoSave(
+      { ...state, ...newState },
+      { totalMoves: newMoveCount, undoCount: 0, timeElapsed: 0, hintsUsed: 0, puzzlesSolved: 0, averageMoves: 0, bestTime: 0 },
+      [],
+      -1,
+      0
+    )
   },
 
   transformPiece: (pieceId: string, rotate = false, flip = false) => {
     const state = get()
-    const updatePieces = (pieces: GamePiece[]) =>
+    
+    const updateGamePieces = (pieces: GamePiece[]) =>
+      pieces.map((p) =>
+        p.id === pieceId
+          ? {
+              ...p,
+              rotation: rotate ? (p.rotation + 90) % 360 : p.rotation,
+              flipped: flip ? !p.flipped : p.flipped,
+            }
+          : p
+      )
+    
+    const updatePlacedPieces = (pieces: PlacedPiece[]) =>
       pieces.map((p) =>
         p.id === pieceId
           ? {
@@ -130,8 +207,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       )
 
     set({
-      trayPieces: updatePieces(state.trayPieces),
-      placedPieces: updatePieces(state.placedPieces),
+      trayPieces: updateGamePieces(state.trayPieces),
+      placedPieces: updatePlacedPieces(state.placedPieces),
     })
   },
 
@@ -158,4 +235,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isWon: newIsWon
     })
   },
+
+  validatePlacement: (piece: GamePiece, row: number, col: number) => {
+    const state = get()
+    if (!state.level) return { valid: false, message: 'No level loaded' }
+    
+    const ruleCheck = validateGameRules(piece, row, col, state.board, state.placedPieces, state.level)
+    const feedback = generateMoveValidationFeedback(ruleCheck)
+    
+    return {
+      valid: ruleCheck.valid,
+      message: feedback.message
+    }
+  },
+
+  getGameAnalysis: () => {
+    const state = get()
+    if (!state.level) return null
+    
+    return analyzeWinCondition(state.board, state.placedPieces, state.level.target)
+  },
+
+  incrementMoveCount: () => {
+    const state = get()
+    set({ moveCount: state.moveCount + 1 })
+  }
 }))
