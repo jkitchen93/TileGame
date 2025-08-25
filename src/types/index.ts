@@ -32,6 +32,18 @@ export interface GameLevel {
   target: number
   constraints: { monomino_cap: number; max_leftovers: number }
   bag: GamePiece[]
+  solution?: {
+    pieceIds: string[]
+    placements: Array<{
+      pieceId: string
+      row: number
+      col: number
+      rotation: number
+      flipped: boolean
+    }>
+    finalSum: number
+    cellsCovered: number
+  }
 }
 
 export interface PlacementResult {

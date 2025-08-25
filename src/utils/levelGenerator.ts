@@ -262,8 +262,24 @@ export function generateLevel(
   
   try {
     const valuedPieces = assignPieceValues(solved.pieces, targetSum)
-    let bag = extractPuzzleBag(valuedPieces)
-    bag = addDecoyPieces(bag, decoyCount)
+    const solutionBag = extractPuzzleBag(valuedPieces)
+    
+    // Store solution piece IDs and placements before adding decoys
+    const solutionPieceIds = solutionBag.map(p => p.id)
+    const solutionPlacements = valuedPieces.map(piece => ({
+      pieceId: piece.id,
+      row: piece.position.y,
+      col: piece.position.x,
+      rotation: piece.rotation,
+      flipped: piece.flipped
+    }))
+    
+    // Calculate final sum and coverage
+    const finalSum = valuedPieces.reduce((sum, p) => sum + p.value, 0)
+    const cellsCovered = valuedPieces.reduce((sum, p) => sum + p.occupiedCells.length, 0)
+    
+    // Add decoys to the bag
+    const fullBag = addDecoyPieces(solutionBag, decoyCount)
     
     const date = new Date().toISOString().split('T')[0]
     
@@ -275,7 +291,13 @@ export function generateLevel(
         monomino_cap: 1,
         max_leftovers: decoyCount + 2
       },
-      bag
+      bag: fullBag,
+      solution: {
+        pieceIds: solutionPieceIds,
+        placements: solutionPlacements,
+        finalSum,
+        cellsCovered
+      }
     }
   } catch (error) {
     console.error('Failed to generate level:', error)
