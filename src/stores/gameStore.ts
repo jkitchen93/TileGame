@@ -100,9 +100,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return false
     }
     
+    // Debug logging
+    console.log(`[DEBUG] Placing piece ${piece.id} at (${row}, ${col})`)
+    console.log(`[DEBUG] Current placed pieces:`, state.placedPieces.map(p => `${p.id}@(${p.position.x},${p.position.y})`))
+    
     // Check if piece is being repositioned - use both source tracking AND piece existence check
     // This handles both UI-driven placement and programmatic placement scenarios
     const isRepositioning = state.pickedUpPieceSource === 'board' || state.placedPieces.some(p => p.id === piece.id)
+    
+    console.log(`[DEBUG] Repositioning: ${isRepositioning}`)
     
     // For validation, exclude the piece if it's being repositioned
     const validationPlacedPieces = isRepositioning 
@@ -114,6 +120,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const feedback = generateMoveValidationFeedback(ruleCheck)
     
     if (!ruleCheck.valid) {
+      console.log(`[DEBUG] Validation failed: ${feedback.message}`)
       set({
         lastMoveValid: false,
         lastMoveMessage: feedback.message
@@ -121,8 +128,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return false
     }
     
+    // CRITICAL FIX: If repositioning, first remove the piece from its old position
+    let boardAfterRemoval = state.board
+    if (isRepositioning) {
+      console.log(`[DEBUG] Removing piece ${piece.id} from old position before placing`)
+      boardAfterRemoval = removePieceFromBoard(state.board, piece.id)
+    }
+    
     // Atomic state update: prepare all new state before setting
-    const newBoard = placePieceOnBoard(state.board, piece, row, col)
+    const newBoard = placePieceOnBoard(boardAfterRemoval, piece, row, col)
     
     // Create PlacedPiece with position and occupied cells
     const placedPiece: PlacedPiece = {
@@ -168,6 +182,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (newPlacedPieces.length > state.level.bag.length) {
       console.error('State inconsistency detected: more placed pieces than bag pieces')
       return false
+    }
+    
+    // VALIDATION: Check for duplicate piece IDs (should not happen but helps debugging)
+    const pieceIds = new Set()
+    for (const placedPiece of newPlacedPieces) {
+      if (pieceIds.has(placedPiece.id)) {
+        console.error(`[ERROR] Duplicate piece ID detected: ${placedPiece.id}`)
+        console.error('All placed pieces:', newPlacedPieces.map(p => `${p.id}@(${p.position.x},${p.position.y})`))
+        return false
+      }
+      pieceIds.add(placedPiece.id)
     }
     
     set(newState)
@@ -360,6 +385,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.warn('Invalid pieceId provided to pickUpPlacedPiece:', pieceId)
       return
     }
+    
+    console.log(`[DEBUG] Picking up placed piece ${pieceId}`)
+    console.log(`[DEBUG] Current placed pieces before pickup:`, state.placedPieces.map(p => `${p.id}@(${p.position.x},${p.position.y})`))
     
     const placedPiece = state.placedPieces.find((p) => p.id === pieceId)
     if (!placedPiece) {

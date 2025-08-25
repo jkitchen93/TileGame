@@ -149,13 +149,23 @@ export function removePieceFromBoard(
   board: BoardCell[][],
   pieceId: string
 ): BoardCell[][] {
-  return board.map(row =>
-    row.map(cell =>
-      cell.pieceId === pieceId
-        ? { ...cell, pieceId: undefined, pieceValue: undefined, pieceShape: undefined }
-        : cell
-    )
+  console.log(`[DEBUG] Removing piece ${pieceId} from board`)
+  
+  // Count how many cells we're clearing
+  let clearedCells = 0
+  const result = board.map(row =>
+    row.map(cell => {
+      if (cell.pieceId === pieceId) {
+        clearedCells++
+        console.log(`[DEBUG] Clearing cell (${cell.row}, ${cell.col}) for piece ${pieceId}`)
+        return { ...cell, pieceId: undefined, pieceValue: undefined, pieceShape: undefined }
+      }
+      return cell
+    })
   )
+  
+  console.log(`[DEBUG] Cleared ${clearedCells} cells for piece ${pieceId}`)
+  return result
 }
 
 export function placePieceOnBoard(
@@ -165,7 +175,22 @@ export function placePieceOnBoard(
   col: number
 ): BoardCell[][] {
   const newBoard = board.map(r => r.map(c => ({ ...c })))
+  
+  // CRITICAL FIX: First clear any existing cells with the same piece ID
+  // This prevents board corruption when repositioning pieces
+  for (let r = 0; r < newBoard.length; r++) {
+    for (let c = 0; c < newBoard[r].length; c++) {
+      if (newBoard[r][c].pieceId === piece.id) {
+        console.log(`[DEBUG] Clearing old position of piece ${piece.id} at (${r}, ${c})`)
+        newBoard[r][c].pieceId = undefined
+        newBoard[r][c].pieceValue = undefined
+        newBoard[r][c].pieceShape = undefined
+      }
+    }
+  }
+  
   const occupiedCells = getOccupiedCells(piece, row, col)
+  console.log(`[DEBUG] Placing piece ${piece.id} at cells:`, occupiedCells)
   
   for (const cell of occupiedCells) {
     if (cell.y >= 0 && cell.y < 5 && cell.x >= 0 && cell.x < 5) {
