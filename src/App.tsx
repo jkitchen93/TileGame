@@ -22,16 +22,20 @@ import { HTML5Backend } from 'react-dnd-html5-backend'
 import { generateLevel } from './utils/levelGenerator'
 
 // Generate a guaranteed solvable level
-const generateDailyLevel = (): GameLevel => {
-  // Use a fixed seed for today for consistency
-  const today = new Date().toISOString().split('T')[0]
+const generateRandomPuzzle = (): GameLevel => {
+  // Generate random parameters for variety
+  const targetSum = Math.floor(Math.random() * 11) + 25  // Random target between 25-35
+  const decoyCount = Math.floor(Math.random() * 3) + 2   // Random 2-4 decoy pieces
   
-  // Try to generate a level with moderate difficulty
-  const level = generateLevel(28, 3) // Target sum of 28, 3 decoy pieces
+  console.log(`Generating new puzzle with target sum: ${targetSum}, decoys: ${decoyCount}`)
   
-  // If generation fails or for testing, use a known solvable puzzle
-  if (!level || true) { // Force using our tested puzzle for now
-    console.log('Using manually verified solvable puzzle')
+  // Try to generate a level with random difficulty
+  const level = generateLevel(targetSum, decoyCount)
+  
+  // If generation fails (rare), use a known solvable puzzle as fallback
+  if (!level) {
+    console.log('Generation failed, using fallback puzzle')
+    const today = new Date().toISOString().split('T')[0]
     return {
       id: today,
       board: { rows: 5, cols: 5 },
@@ -58,7 +62,7 @@ const generateDailyLevel = (): GameLevel => {
   return level
 }
 
-const sampleLevel: GameLevel = generateDailyLevel()
+const sampleLevel: GameLevel = generateRandomPuzzle()
 
 function App() {
   const { loadLevel, isWon, moveCount, cancelPickup, returnPickedUpPieceToTray, pickedUpPiece, transformPiece } = useGameStore()
@@ -224,7 +228,7 @@ function App() {
               >
                 Cozy PolySum
               </h1>
-              <p className="text-xl text-purple-700 opacity-80 mb-5">Daily Puzzle #42</p>
+              <p className="text-xl text-purple-700 opacity-80 mb-5">Puzzle #{Math.floor(Math.random() * 9000) + 1000}</p>
               
               {/* Inline Score Display */}
               <GameHUD />
