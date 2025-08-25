@@ -79,9 +79,11 @@ export const GameBoard: React.FC = () => {
         // Calculate adjusted placement position based on grab point
         const adjustedPosition = getAdjustedPlacementPosition(row, col, item.piece, grabPoint)
         
+        // Update both ref and state atomically to prevent sync issues
         currentHoverPositionRef.current = adjustedPosition
         setHoveredPosition(adjustedPosition)
       } else {
+        // Clear both ref and state atomically
         currentHoverPositionRef.current = null
         setHoveredPosition(null)
       }
@@ -125,13 +127,19 @@ export const GameBoard: React.FC = () => {
     const activePiece = draggedPieceRef.current || pickedUpPiece
     if (!activePiece || !hoveredPosition) return false
 
+    // Only exclude the active piece from validation if it's currently placed on the board
+    const isActivePieceOnBoard = placedPieces.some(p => p.id === activePiece.id)
+    const piecesToCheck = isActivePieceOnBoard 
+      ? placedPieces.filter(p => p.id !== activePiece.id) 
+      : placedPieces
+
     // Check placement directly at hovered position
     const placementResult = isValidPlacement(
       activePiece,
       hoveredPosition.row,
       hoveredPosition.col,
       board,
-      placedPieces.filter(p => p.id !== activePiece!.id), // Exclude the active piece if it's already placed
+      piecesToCheck,
       monominoCount
     )
 
@@ -163,8 +171,11 @@ export const GameBoard: React.FC = () => {
     if (row >= 0 && row < 5 && col >= 0 && col < 5) {
       // Calculate adjusted placement position based on grab point
       const adjustedPosition = getAdjustedPlacementPosition(row, col, pickedUpPiece, grabPoint)
+      // Update both for consistency (mouse move doesn't use currentHoverPositionRef but keep it synced)
+      currentHoverPositionRef.current = adjustedPosition
       setHoveredPosition(adjustedPosition)
     } else {
+      currentHoverPositionRef.current = null
       setHoveredPosition(null)
     }
   }
@@ -273,7 +284,11 @@ export const GameBoard: React.FC = () => {
           boxShadow: '0 20px 40px rgba(147, 51, 234, 0.15), 0 10px 20px rgba(147, 51, 234, 0.1)'
         }}
         onMouseMove={handleMouseMove}
-        onMouseLeave={() => setHoveredPosition(null)}
+        onMouseLeave={() => {
+          // Clear both state and ref when leaving the board
+          setHoveredPosition(null)
+          currentHoverPositionRef.current = null
+        }}
         onClick={handleBoardClick}
         data-board="true"
         role="grid"

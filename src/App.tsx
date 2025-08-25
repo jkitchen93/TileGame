@@ -249,15 +249,21 @@ function App() {
         </div>
 
         {/* Game Container */}
-        <div 
-          className="game-container relative w-full max-w-7xl h-[600px] flex justify-center items-center"
-          onClick={handleTrayAreaClick}
-        >
+        <div className="game-container flex flex-col items-center gap-8 w-full max-w-7xl">
           {/* Centered Game Board */}
           <GameBoard />
           
-          {/* Scattered Pieces */}
-          <PieceTray />
+          {/* Piece Tray Area Below Board */}
+          <div 
+            className="tray-area relative w-full h-[300px] bg-purple-50 border-2 border-purple-200 rounded-3xl"
+            onClick={handleTrayAreaClick}
+            style={{
+              background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)',
+              boxShadow: 'inset 0 2px 10px rgba(147, 51, 234, 0.1)'
+            }}
+          >
+            <PieceTray />
+          </div>
         </div>
 
         {/* Instructions */}

@@ -101,28 +101,28 @@ export const PieceTray: React.FC = () => {
     return null
   }
 
-  // Define scattered positions for pieces (adjusted for larger 48px cells)
+  // Define scattered positions for pieces within the tray area (300px height)
   const scatteredPositions = [
-    // T-piece (value 4) - top left (needs more space for 4-cell piece)
-    { left: '60px', top: '40px', transform: 'rotate(-8deg)' },
-    // L-piece (value 3) - top right  
-    { right: '80px', top: '60px', transform: 'rotate(12deg)' },
+    // T-piece (value 4) - top left area
+    { left: '10%', top: '20px', transform: 'rotate(-8deg)' },
+    // L-piece (value 3) - top right area
+    { right: '10%', top: '30px', transform: 'rotate(12deg)' },
     // I-piece (value 5) - left side (long piece needs space)
-    { left: '20px', top: '220px', transform: 'rotate(-5deg)' },
+    { left: '5%', top: '120px', transform: 'rotate(-5deg)' },
     // O-piece (value 2) - bottom left (2x2 square)
-    { left: '120px', bottom: '80px', transform: 'rotate(7deg)' },
-    // S-piece (value 3) - right side
-    { right: '50px', top: '200px', transform: 'rotate(-10deg)' },
+    { left: '15%', bottom: '40px', transform: 'rotate(7deg)' },
+    // S-piece (value 3) - right side middle
+    { right: '8%', top: '100px', transform: 'rotate(-10deg)' },
     // I3-piece (value 2) - bottom right
-    { right: '100px', bottom: '120px', transform: 'rotate(15deg)' },
+    { right: '12%', bottom: '50px', transform: 'rotate(15deg)' },
     // L3-piece (value 2) - top center
-    { left: '50%', top: '30px', transform: 'translateX(-50%) rotate(-3deg)' },
-    // I2-piece (value 1) - left bottom
-    { left: '40px', bottom: '180px', transform: 'rotate(20deg)' },
+    { left: '50%', top: '15px', transform: 'translateX(-50%) rotate(-3deg)' },
+    // I2-piece (value 1) - left middle
+    { left: '25%', top: '80px', transform: 'rotate(20deg)' },
     // I2-piece (value 1) - right top
-    { right: '20px', top: '140px', transform: 'rotate(-15deg)' },
+    { right: '25%', top: '60px', transform: 'rotate(-15deg)' },
     // I1-piece (value 5) - bottom center
-    { left: '48%', bottom: '50px', transform: 'translateX(-50%) rotate(5deg)' }
+    { left: '50%', bottom: '30px', transform: 'translateX(-50%) rotate(5deg)' }
   ]
 
   return (

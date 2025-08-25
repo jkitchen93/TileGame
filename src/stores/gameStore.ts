@@ -22,6 +22,7 @@ interface GameStore extends GameState {
   
   // Click-to-pickup state
   pickedUpPiece: GamePiece | null
+  pickedUpPieceSource: 'board' | 'tray' | null
   grabPoint: { cellX: number, cellY: number } | null
   
   // Actions
@@ -58,6 +59,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   lastMoveMessage: '',
   moveCount: 0,
   pickedUpPiece: null,
+  pickedUpPieceSource: null,
   grabPoint: null,
 
   loadLevel: (level: GameLevel) => {
@@ -82,6 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastMoveMessage: '',
       moveCount: 0,
       pickedUpPiece: null,
+      pickedUpPieceSource: null,
       grabPoint: null,
     })
   },
@@ -91,8 +94,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     
     if (!state.level) return false
     
+    // Defensive check: ensure piece exists and is valid
+    if (!piece || !piece.id) {
+      console.warn('Invalid piece provided to placePiece:', piece)
+      return false
+    }
+    
+    // Check if piece is being repositioned - use both source tracking AND piece existence check
+    // This handles both UI-driven placement and programmatic placement scenarios
+    const isRepositioning = state.pickedUpPieceSource === 'board' || state.placedPieces.some(p => p.id === piece.id)
+    
+    // For validation, exclude the piece if it's being repositioned
+    const validationPlacedPieces = isRepositioning 
+      ? state.placedPieces.filter(p => p.id !== piece.id)
+      : state.placedPieces
+    
     // Enhanced validation using new game rules
-    const ruleCheck = validateGameRules(piece, row, col, state.board, state.placedPieces, state.level)
+    const ruleCheck = validateGameRules(piece, row, col, state.board, validationPlacedPieces, state.level)
     const feedback = generateMoveValidationFeedback(ruleCheck)
     
     if (!ruleCheck.valid) {
@@ -103,6 +121,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return false
     }
     
+    // Atomic state update: prepare all new state before setting
     const newBoard = placePieceOnBoard(state.board, piece, row, col)
     
     // Create PlacedPiece with position and occupied cells
@@ -112,8 +131,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       occupiedCells: getOccupiedCells(piece, row, col)
     }
     
-    const newPlacedPieces = [...state.placedPieces, placedPiece]
-    const newTrayPieces = state.trayPieces.filter(p => p.id !== piece.id)
+    // Update placed pieces: remove old position if repositioning, then add new position
+    // This prevents duplicates and handles all placement scenarios
+    const newPlacedPieces = isRepositioning
+      ? [...state.placedPieces.filter(p => p.id !== piece.id), placedPiece]
+      : [...state.placedPieces, placedPiece]
+    
+    // Update tray pieces: only remove if piece came from tray (not repositioning)
+    const newTrayPieces = isRepositioning
+      ? state.trayPieces
+      : state.trayPieces.filter(p => p.id !== piece.id)
     
     const newMonominoCount = countMonominoes(newPlacedPieces)
     const newCurrentSum = calculateSum(newPlacedPieces)
@@ -133,7 +160,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       lastMoveMessage: feedback.message,
       moveCount: newMoveCount,
       pickedUpPiece: null, // Clear picked up piece when placing
+      pickedUpPieceSource: null, // Clear source when placing
       grabPoint: null, // Clear grab point when placing
+    }
+    
+    // Verify the new state is consistent before setting
+    if (newPlacedPieces.length > state.level.bag.length) {
+      console.error('State inconsistency detected: more placed pieces than bag pieces')
+      return false
     }
     
     set(newState)
@@ -152,8 +186,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   returnPieceToTray: (pieceId: string) => {
     const state = get()
+    
+    // Defensive check: ensure piece ID is valid
+    if (!pieceId) {
+      console.warn('Invalid pieceId provided to returnPieceToTray:', pieceId)
+      return
+    }
+    
     const placedPiece = state.placedPieces.find((p) => p.id === pieceId)
-    if (!placedPiece) return
+    if (!placedPiece) {
+      console.warn('Piece not found in placed pieces:', pieceId)
+      return
+    }
 
     const newBoard = removePieceFromBoard(state.board, pieceId)
     const newPlacedPieces = state.placedPieces.filter((p) => p.id !== pieceId)
@@ -303,14 +347,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pickUpPiece: (piece: GamePiece, grabPoint?: { cellX: number, cellY: number }) => {
     set({ 
       pickedUpPiece: piece,
+      pickedUpPieceSource: 'tray' as 'tray',
       grabPoint: grabPoint || null
     })
   },
 
   pickUpPlacedPiece: (pieceId: string, grabPoint?: { cellX: number, cellY: number }) => {
     const state = get()
+    
+    // Defensive check: ensure piece ID is valid
+    if (!pieceId) {
+      console.warn('Invalid pieceId provided to pickUpPlacedPiece:', pieceId)
+      return
+    }
+    
     const placedPiece = state.placedPieces.find((p) => p.id === pieceId)
-    if (!placedPiece) return
+    if (!placedPiece) {
+      console.warn('Piece not found in placed pieces:', pieceId)
+      return
+    }
 
     // Remove from board and placed pieces
     const newBoard = removePieceFromBoard(state.board, pieceId)
@@ -341,6 +396,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isWon: newIsWon,
       moveCount: newMoveCount,
       pickedUpPiece: gamePiece,
+      pickedUpPieceSource: 'board' as 'board',
       grabPoint: grabPoint || null,
       lastMoveValid: true,
       lastMoveMessage: 'Piece picked up from board'
@@ -361,6 +417,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cancelPickup: () => {
     set({ 
       pickedUpPiece: null,
+      pickedUpPieceSource: null,
       grabPoint: null
     })
   },
@@ -378,6 +435,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({
         trayPieces: newTrayPieces,
         pickedUpPiece: null,
+        pickedUpPieceSource: null,
         grabPoint: null,
         lastMoveValid: true,
         lastMoveMessage: 'Piece returned to tray'
@@ -386,6 +444,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // Piece was from tray, just cancel pickup
       set({ 
         pickedUpPiece: null,
+        pickedUpPieceSource: null,
         grabPoint: null
       })
     }
