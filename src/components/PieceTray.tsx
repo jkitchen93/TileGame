@@ -13,7 +13,10 @@ interface PieceTrayItemProps {
 }
 
 const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
-  const { pickUpPiece, cancelPickup, isPickedUp, pickedUpPiece } = useGameStore()
+  const { pickUpPiece, cancelPickup, isPickedUp, pickedUpPiece, getTrayPosition } = useGameStore()
+  
+  // Use position from store (by piece ID) instead of passed position
+  const actualPosition = getTrayPosition(piece.id) || position
 
 
 
@@ -57,18 +60,18 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
         !isPiecePicked ? 'hover:scale-105 hover:z-100' : ''
       } ${isPiecePicked ? 'opacity-0' : 'opacity-100'}`}
       style={{
-        ...position,
-        transform: `${position.transform || ''}`,
+        ...actualPosition,
+        transform: `${actualPosition.transform || ''}`,
         filter: 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1))'
       }}
       onMouseEnter={(e) => {
         if (!isPiecePicked) {
-          e.currentTarget.style.transform = `${position.transform || ''} scale(1.05) rotate(0deg)`
+          e.currentTarget.style.transform = `${actualPosition.transform || ''} scale(1.05) rotate(0deg)`
         }
       }}
       onMouseLeave={(e) => {
         if (!isPiecePicked) {
-          e.currentTarget.style.transform = position.transform || ''
+          e.currentTarget.style.transform = actualPosition.transform || ''
         }
       }}
     >
@@ -101,44 +104,19 @@ export const PieceTray: React.FC = () => {
     return null
   }
 
-  // Define scattered positions for pieces within the tray area (300px height)
-  const scatteredPositions = [
-    // T-piece (value 4) - top left area
-    { left: '10%', top: '20px', transform: 'rotate(-8deg)' },
-    // L-piece (value 3) - top right area
-    { right: '10%', top: '30px', transform: 'rotate(12deg)' },
-    // I-piece (value 5) - left side (long piece needs space)
-    { left: '5%', top: '120px', transform: 'rotate(-5deg)' },
-    // O-piece (value 2) - bottom left (2x2 square)
-    { left: '15%', bottom: '40px', transform: 'rotate(7deg)' },
-    // S-piece (value 3) - right side middle
-    { right: '8%', top: '100px', transform: 'rotate(-10deg)' },
-    // I3-piece (value 2) - bottom right
-    { right: '12%', bottom: '50px', transform: 'rotate(15deg)' },
-    // L3-piece (value 2) - top center
-    { left: '50%', top: '15px', transform: 'translateX(-50%) rotate(-3deg)' },
-    // I2-piece (value 1) - left middle
-    { left: '25%', top: '80px', transform: 'rotate(20deg)' },
-    // I2-piece (value 1) - right top
-    { right: '25%', top: '60px', transform: 'rotate(-15deg)' },
-    // I1-piece (value 5) - bottom center
-    { left: '50%', bottom: '30px', transform: 'translateX(-50%) rotate(5deg)' }
-  ]
+  // Fallback position in case piece position not found in store
+  const fallbackPosition = { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
 
   return (
     <>
-      {trayPieces.map((piece, index) => {
-        const position = scatteredPositions[index] || { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
-        
-        return (
-          <PieceTrayItem
-            key={piece.id}
-            piece={piece}
-            position={position}
-            index={index}
-          />
-        )
-      })}
+      {trayPieces.map((piece, index) => (
+        <PieceTrayItem
+          key={piece.id}
+          piece={piece}
+          position={fallbackPosition}
+          index={index}
+        />
+      ))}
     </>
   )
 }

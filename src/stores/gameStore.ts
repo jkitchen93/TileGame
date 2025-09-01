@@ -13,6 +13,7 @@ import { analyzeWinCondition } from '../utils/winConditions'
 import { validateGameRules, generateMoveValidationFeedback } from '../utils/gameRules'
 import { scheduleAutoSave } from '../utils/persistence'
 import { transformGrabPoint } from '../utils/grabPoint'
+import { TrayPosition, generateTrayPositions, findAvailablePosition } from '../utils/trayPositioning'
 
 interface GameStore extends GameState {
   // Enhanced state
@@ -24,6 +25,9 @@ interface GameStore extends GameState {
   pickedUpPiece: GamePiece | null
   pickedUpPieceSource: 'board' | 'tray' | null
   grabPoint: { cellX: number, cellY: number } | null
+  
+  // Tray positioning state
+  trayPositions: Record<string, TrayPosition>
   
   // Actions
   loadLevel: (level: GameLevel) => void
@@ -44,6 +48,9 @@ interface GameStore extends GameState {
   cancelPickup: () => void
   returnPickedUpPieceToTray: () => void
   isPickedUp: (pieceId: string) => boolean
+  
+  // Tray positioning actions
+  getTrayPosition: (pieceId: string) => TrayPosition | undefined
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -61,6 +68,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   pickedUpPiece: null,
   pickedUpPieceSource: null,
   grabPoint: null,
+  trayPositions: {},
 
   loadLevel: (level: GameLevel) => {
     const board = Array(5)
@@ -70,6 +78,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
           .fill(null)
           .map((_, col) => ({ row, col }))
       )
+
+    // Generate initial tray positions for all pieces
+    const pieceIds = level.bag.map(piece => piece.id)
+    const initialTrayPositions = generateTrayPositions(pieceIds)
 
     set({
       level,
@@ -86,6 +98,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       pickedUpPiece: null,
       pickedUpPieceSource: null,
       grabPoint: null,
+      trayPositions: initialTrayPositions,
     })
   },
 
@@ -237,6 +250,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     const newTrayPieces = [...state.trayPieces, gamePiece]
     
+    // Ensure the piece has a position in tray (should already exist, but just in case)
+    const newTrayPositions = { ...state.trayPositions }
+    if (!newTrayPositions[placedPiece.id]) {
+      // Find an available position for the returning piece
+      const currentTrayPieceIds = newTrayPieces.map(p => p.id)
+      const occupiedPositions = Object.fromEntries(
+        currentTrayPieceIds
+          .filter(id => id !== placedPiece.id && newTrayPositions[id])
+          .map(id => [id, newTrayPositions[id]])
+      )
+      newTrayPositions[placedPiece.id] = findAvailablePosition(occupiedPositions)
+    }
+    
     const newMonominoCount = countMonominoes(newPlacedPieces)
     const newCurrentSum = calculateSum(newPlacedPieces)
     const newCoveredCells = getBoardCoverage(newBoard)
@@ -253,7 +279,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isWon: newIsWon,
       moveCount: newMoveCount,
       lastMoveValid: true,
-      lastMoveMessage: 'Piece returned to tray'
+      lastMoveMessage: 'Piece returned to tray',
+      trayPositions: newTrayPositions
     }
 
     set(newState)
@@ -459,14 +486,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
     
     if (!isInTray) {
       // Piece was picked up from the board, add it to tray
-      const newTrayPieces = [...state.trayPieces, state.pickedUpPiece]
+      const pickedUpPiece = state.pickedUpPiece!
+      const newTrayPieces = [...state.trayPieces, pickedUpPiece]
+      
+      // Ensure the piece has a position in tray
+      const newTrayPositions = { ...state.trayPositions }
+      if (!newTrayPositions[pickedUpPiece.id]) {
+        // Find an available position for the returning piece
+        const currentTrayPieceIds = newTrayPieces.map(p => p.id)
+        const occupiedPositions = Object.fromEntries(
+          currentTrayPieceIds
+            .filter(id => id !== pickedUpPiece.id && newTrayPositions[id])
+            .map(id => [id, newTrayPositions[id]])
+        )
+        newTrayPositions[pickedUpPiece.id] = findAvailablePosition(occupiedPositions)
+      }
+      
       set({
         trayPieces: newTrayPieces,
         pickedUpPiece: null,
         pickedUpPieceSource: null,
         grabPoint: null,
         lastMoveValid: true,
-        lastMoveMessage: 'Piece returned to tray'
+        lastMoveMessage: 'Piece returned to tray',
+        trayPositions: newTrayPositions
       })
     } else {
       // Piece was from tray, just cancel pickup
@@ -481,5 +524,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   isPickedUp: (pieceId: string) => {
     const state = get()
     return state.pickedUpPiece?.id === pieceId
+  },
+
+  getTrayPosition: (pieceId: string) => {
+    const state = get()
+    return state.trayPositions[pieceId]
   }
 }))
