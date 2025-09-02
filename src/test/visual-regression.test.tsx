@@ -115,9 +115,9 @@ describe('Visual Regression Tests', () => {
     )
     
     // Import tray positioning utilities
-    const { generateUShapedSlots, TRAY_CONFIG } = await import('../utils/trayPositioning')
+    const { generateLeftRightSlots, TRAY_CONFIG } = await import('../utils/trayPositioning')
     
-    const slots = generateUShapedSlots()
+    const slots = generateLeftRightSlots()
     
     // Validate that all calculated positions are reasonable
     slots.forEach(slot => {
@@ -127,13 +127,15 @@ describe('Visual Regression Tests', () => {
       expect(position.left).toBeDefined()
       expect(position.top).toBeDefined()
       
-      // Verify side-specific positioning logic
-      if (side === 'bottom') {
-        expect(position.left).toContain('calc(')
-        expect(position.top).toContain(`${TRAY_CONFIG.BOARD_SIZE/2}px + ${TRAY_CONFIG.BOARD_PADDING}px`)
+      // Verify side-specific positioning logic (left/right only)
+      if (side === 'left') {
+        expect(position.left).toContain(`- ${TRAY_CONFIG.BOARD_SIZE/2}px`)
       } else if (side === 'right') {
         expect(position.left).toContain(`+ ${TRAY_CONFIG.BOARD_SIZE/2}px`)
       }
+      
+      // Should not have any bottom slots
+      expect(side).not.toBe('bottom')
     })
   })
   

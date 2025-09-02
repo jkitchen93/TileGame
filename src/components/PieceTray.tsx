@@ -24,10 +24,10 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
     
     // ADDITIONAL SAFETY: If both store and passed positions are invalid, log and use safe fallback
     if (!actualPosition || (actualPosition.left === '50%' && actualPosition.top === '50%')) {
-      console.error(`[PIECE_TRAY] Invalid position detected for piece ${piece.id}. Using safe bottom-left fallback.`)
+      console.error(`[PIECE_TRAY] Invalid position detected for piece ${piece.id}. Using safe left-side fallback.`)
       actualPosition = {
-        left: 'calc(50% - 225px - 50px)', // Left of board
-        top: 'calc(50% + 225px + 50px)',  // Bottom area
+        left: 'calc(50% - 225px - 90px - 140px)', // Left of board (board center - half board - padding - slot width)
+        top: 'calc(50% - 225px)',  // Board top level
         transform: undefined
       }
     }
@@ -99,8 +99,8 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
         <GamePiece
           piece={piece}
           state="tray"
-          cellSize={GridUtils.CELL_SIZE}
-          gapSize={GridUtils.GAP_SIZE}
+          cellSize={24}
+          gapSize={2}
           className="transition-all duration-200"
         />
       </div>
@@ -119,10 +119,10 @@ export const PieceTray: React.FC = () => {
     return null
   }
 
-  // FIXED: Safe fallback position instead of center-screen
+  // FIXED: Safe fallback position for left/right only layout
   const fallbackPosition = {
-    left: 'calc(50% - 225px - 50px)', // Position to the left of the board
-    top: 'calc(50% + 225px + 50px)',  // Position below the board
+    left: 'calc(50% - 225px - 90px - 140px)', // Position to the left of the board (board center - half board - padding - slot width)
+    top: 'calc(50% - 225px)',  // Position at board top level
     transform: undefined
   }
 

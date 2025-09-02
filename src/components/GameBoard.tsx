@@ -66,7 +66,7 @@ export const GameBoard: React.FC = () => {
       const boardRect = boardElement.getBoundingClientRect()
       
       // Use the actual padding from the board container style
-      const actualPadding = 25 // This matches the padding: '25px' in the board container
+      const actualPadding = 18 // This matches the padding: '18px' in the board container
       
       const relativeX = clientOffset.x - boardRect.left - actualPadding
       const relativeY = clientOffset.y - boardRect.top - actualPadding
@@ -159,7 +159,7 @@ export const GameBoard: React.FC = () => {
     const boardRect = boardElement.getBoundingClientRect()
     
     // Use the actual padding from the board container style
-    const actualPadding = 25 // This matches the padding: '25px' in the board container
+    const actualPadding = 18 // This matches the padding: '18px' in the board container
     
     const relativeX = e.clientX - boardRect.left - actualPadding
     const relativeY = e.clientY - boardRect.top - actualPadding
@@ -203,7 +203,7 @@ export const GameBoard: React.FC = () => {
       const boardRect = boardElement.getBoundingClientRect()
       
       // Use the actual padding from the board container style
-      const actualPadding = 25 // This matches the padding: '25px' in the board container
+      const actualPadding = 18 // This matches the padding: '18px' in the board container
       
       const relativeX = e.clientX - boardRect.left - actualPadding
       const relativeY = e.clientY - boardRect.top - actualPadding
@@ -276,13 +276,13 @@ export const GameBoard: React.FC = () => {
       
       <div
         ref={drop as any}
-        className={`relative bg-white border-2 transition-colors z-10 ${draggedPieceRef.current || pickedUpPiece ? 'border-green-400 shadow-lg' : 'border-purple-200'}`}
+        className={`relative bg-white border-2 transition-colors z-10 ${draggedPieceRef.current || pickedUpPiece ? 'border-green-400 shadow-md' : 'border-purple-200'}`}
         style={{
-          borderRadius: '20px',
-          padding: '25px',
-          width: '450px',
-          height: '450px',
-          boxShadow: '0 20px 40px rgba(147, 51, 234, 0.15), 0 10px 20px rgba(147, 51, 234, 0.1)'
+          borderRadius: '12px',
+          padding: '18px',
+          width: '420px',
+          height: '420px',
+          boxShadow: '0 4px 12px rgba(147, 51, 234, 0.1)'
         }}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => {

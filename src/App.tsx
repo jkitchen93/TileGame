@@ -249,7 +249,7 @@ function App() {
         </div>
 
         {/* Game Container - Board with U-shaped tray wrapping around it */}
-        <div className="game-container relative flex items-center justify-center w-full max-w-7xl" style={{ minHeight: '800px' }}>
+        <div className="game-container relative flex items-center justify-center w-full max-w-7xl">
           {/* U-shaped Piece Tray - Wraps around the board (background layer) */}
           <div
             className="absolute inset-0 z-10"

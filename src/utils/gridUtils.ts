@@ -4,10 +4,10 @@
  */
 
 export const GridUtils = {
-  // Base measurements
-  CELL_SIZE: 48,    // Size of a single cell in pixels
-  GAP_SIZE: 4,      // Gap between cells in pixels
-  GRID_STEP: 52,    // Total step size (cell + gap)
+  // Base measurements - ENLARGED for 50% bigger interactive grid
+  CELL_SIZE: 72,    // Size of a single cell in pixels (enlarged from 48px)
+  GAP_SIZE: 6,      // Gap between cells in pixels (enlarged from 4px)
+  GRID_STEP: 78,    // Total step size (cell + gap) (72 + 6 = 78)
   BOARD_SIZE: 5,    // 5x5 grid
   
   /**
