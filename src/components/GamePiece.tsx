@@ -47,7 +47,7 @@ export const GamePiece: React.FC<GamePieceProps> = ({
       case 'placed':
         return 'cursor-pointer hover:scale-105 transition-transform'
       default:
-        return 'cursor-grab hover:scale-105 hover:z-100 transition-all duration-200'
+        return 'cursor-grab hover:scale-105 hover:z-40 transition-all duration-200'
     }
   }
 
@@ -59,6 +59,8 @@ export const GamePiece: React.FC<GamePieceProps> = ({
       role="button"
       aria-label={`Piece ${piece.shape}, value ${piece.value}, rotation ${piece.rotation}°${piece.flipped ? ', flipped' : ''}`}
       style={{ width, height }}
+      data-piece-id={piece.id}
+      data-piece-state={state}
     >
       {/* SVG Piece */}
       <svg

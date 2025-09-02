@@ -248,21 +248,19 @@ function App() {
           </div>
         </div>
 
-        {/* Game Container */}
-        <div className="game-container flex flex-col items-center gap-8 w-full max-w-7xl">
-          {/* Centered Game Board */}
-          <GameBoard />
-          
-          {/* Piece Tray Area Below Board */}
-          <div 
-            className="tray-area relative w-full h-[300px] bg-purple-50 border-2 border-purple-200 rounded-3xl"
+        {/* Game Container - Board with U-shaped tray wrapping around it */}
+        <div className="game-container relative flex items-center justify-center w-full max-w-7xl" style={{ minHeight: '800px' }}>
+          {/* U-shaped Piece Tray - Wraps around the board (background layer) */}
+          <div
+            className="absolute inset-0 z-10"
             onClick={handleTrayAreaClick}
-            style={{
-              background: 'linear-gradient(135deg, #faf5ff, #f3e8ff)',
-              boxShadow: 'inset 0 2px 10px rgba(147, 51, 234, 0.1)'
-            }}
           >
             <PieceTray />
+          </div>
+          
+          {/* Centered Game Board (above tray background, below tray pieces) */}
+          <div className="relative z-20">
+            <GameBoard />
           </div>
         </div>
 

@@ -15,8 +15,23 @@ interface PieceTrayItemProps {
 const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
   const { pickUpPiece, cancelPickup, isPickedUp, pickedUpPiece, getTrayPosition } = useGameStore()
   
-  // Use position from store (by piece ID) instead of passed position
-  const actualPosition = getTrayPosition(piece.id) || position
+  // ENHANCED: Use position from store with robust fallback handling
+  let actualPosition = getTrayPosition(piece.id)
+  
+  if (!actualPosition) {
+    console.warn(`[PIECE_TRAY] Missing tray position for piece ${piece.id}, using passed position`)
+    actualPosition = position
+    
+    // ADDITIONAL SAFETY: If both store and passed positions are invalid, log and use safe fallback
+    if (!actualPosition || (actualPosition.left === '50%' && actualPosition.top === '50%')) {
+      console.error(`[PIECE_TRAY] Invalid position detected for piece ${piece.id}. Using safe bottom-left fallback.`)
+      actualPosition = {
+        left: 'calc(50% - 225px - 50px)', // Left of board
+        top: 'calc(50% + 225px + 50px)',  // Bottom area
+        transform: undefined
+      }
+    }
+  }
 
 
 
@@ -56,8 +71,8 @@ const PieceTrayItem: React.FC<PieceTrayItemProps> = ({ piece, position }) => {
 
   return (
     <div
-      className={`absolute z-20 cursor-pointer transition-transform duration-200 ${
-        !isPiecePicked ? 'hover:scale-105 hover:z-100' : ''
+      className={`absolute z-30 cursor-pointer transition-transform duration-200 ${
+        !isPiecePicked ? 'hover:scale-105 hover:z-40' : ''
       } ${isPiecePicked ? 'opacity-0' : 'opacity-100'}`}
       style={{
         ...actualPosition,
@@ -104,8 +119,12 @@ export const PieceTray: React.FC = () => {
     return null
   }
 
-  // Fallback position in case piece position not found in store
-  const fallbackPosition = { left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }
+  // FIXED: Safe fallback position instead of center-screen
+  const fallbackPosition = {
+    left: 'calc(50% - 225px - 50px)', // Position to the left of the board
+    top: 'calc(50% + 225px + 50px)',  // Position below the board
+    transform: undefined
+  }
 
   return (
     <>

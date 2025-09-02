@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useDrop } from 'react-dnd'
 import { useGameStore } from '../stores/gameStore'
 import { GamePiece as GamePieceType } from '../types'
@@ -14,6 +14,7 @@ export const GameBoard: React.FC = () => {
   const [hoveredPosition, setHoveredPosition] = useState<{ row: number; col: number } | null>(null)
   const draggedPieceRef = useRef<GamePieceType | null>(null)
   const currentHoverPositionRef = useRef<{ row: number; col: number } | null>(null)
+
 
   // Setup drop zone for the entire board
   const [{ }, drop] = useDrop(() => ({
@@ -348,7 +349,7 @@ export const GameBoard: React.FC = () => {
             return (
               <div
                 key={piece.id}
-                className="absolute cursor-pointer hover:z-50"
+                className="absolute cursor-pointer hover:z-40"
                 style={{
                   left: `${leftPosition}px`,
                   top: `${topPosition}px`,

@@ -250,9 +250,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     const newTrayPieces = [...state.trayPieces, gamePiece]
     
-    // Ensure the piece has a position in tray (should already exist, but just in case)
+    // ENHANCED: Ensure the piece has a position in tray with center-screen prevention
     const newTrayPositions = { ...state.trayPositions }
     if (!newTrayPositions[placedPiece.id]) {
+      console.log(`[GAME_STORE] Finding available position for returning board piece ${placedPiece.id}`)
       // Find an available position for the returning piece
       const currentTrayPieceIds = newTrayPieces.map(p => p.id)
       const occupiedPositions = Object.fromEntries(
@@ -260,7 +261,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
           .filter(id => id !== placedPiece.id && newTrayPositions[id])
           .map(id => [id, newTrayPositions[id]])
       )
-      newTrayPositions[placedPiece.id] = findAvailablePosition(occupiedPositions)
+      const availablePosition = findAvailablePosition(occupiedPositions)
+      
+      // SAFETY CHECK: Prevent center-screen fallback
+      if (availablePosition.left === '50%' && availablePosition.top === '50%') {
+        console.warn(`[GAME_STORE] Detected center-screen fallback for returning piece ${placedPiece.id}, using safer position`)
+        newTrayPositions[placedPiece.id] = {
+          left: 'calc(50% - 225px - 100px)', // Safe position left of board
+          top: 'calc(50% + 225px + 60px)',   // Safe position below board
+          transform: undefined
+        }
+      } else {
+        newTrayPositions[placedPiece.id] = availablePosition
+      }
     }
     
     const newMonominoCount = countMonominoes(newPlacedPieces)
@@ -489,9 +502,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const pickedUpPiece = state.pickedUpPiece!
       const newTrayPieces = [...state.trayPieces, pickedUpPiece]
       
-      // Ensure the piece has a position in tray
+      // ENHANCED: Ensure the piece has a position in tray with better error handling
       const newTrayPositions = { ...state.trayPositions }
       if (!newTrayPositions[pickedUpPiece.id]) {
+        console.log(`[GAME_STORE] Finding available position for returning piece ${pickedUpPiece.id}`)
         // Find an available position for the returning piece
         const currentTrayPieceIds = newTrayPieces.map(p => p.id)
         const occupiedPositions = Object.fromEntries(
@@ -499,7 +513,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
             .filter(id => id !== pickedUpPiece.id && newTrayPositions[id])
             .map(id => [id, newTrayPositions[id]])
         )
-        newTrayPositions[pickedUpPiece.id] = findAvailablePosition(occupiedPositions)
+        const availablePosition = findAvailablePosition(occupiedPositions)
+        
+        // SAFETY CHECK: Ensure we don't get center-screen fallback
+        if (availablePosition.left === '50%' && availablePosition.top === '50%') {
+          console.warn(`[GAME_STORE] Detected center-screen fallback for piece ${pickedUpPiece.id}, using safer position`)
+          newTrayPositions[pickedUpPiece.id] = {
+            left: 'calc(50% - 225px - 80px)', // Further left of board
+            top: 'calc(50% + 225px + 80px)',  // Further below board
+            transform: undefined
+          }
+        } else {
+          newTrayPositions[pickedUpPiece.id] = availablePosition
+        }
       }
       
       set({
